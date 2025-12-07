@@ -2,42 +2,44 @@
 import React, { useMemo } from 'react';
 import { BlockType } from '../types';
 import * as THREE from 'three';
-
-// --- VISUAL OVERHAUL: Continuous World Gradient + GLOW + SEAMLESS ---
-// Blocks color themselves based on their world Y position and emit light.
-// Edges removed by using standard boxGeometry.
+import { useGameStore } from '../store';
 
 interface GeometryProps {
   type: BlockType;
   isGoal?: boolean;
 }
 
-// Custom hook to modify standard material
+// Helper to shift hue in GLSL
+const HUE_SHIFT_GLSL = `
+vec3 hueShift(vec3 color, float hue) {
+    const vec3 k = vec3(0.57735, 0.57735, 0.57735);
+    float cosAngle = cos(hue);
+    return vec3(color * cosAngle + cross(k, color) * sin(hue) + k * dot(k, color) * (1.0 - cosAngle));
+}
+`;
+
 const useContinuousGradient = (isDecor: boolean, isGoal: boolean) => {
+    const activePalette = useGameStore(s => s.activePalette);
+    const hueOffset = useGameStore(s => s.hueOffset);
+
     const uniforms = useMemo(() => ({
-        uColorBottom: { value: new THREE.Color(isDecor ? "#1e1b4b" : "#4c1d95") }, // Dark Violet
-        uColorTop: { value: new THREE.Color(isDecor ? "#4338ca" : "#22d3ee") },   // Cyan/Blue
-        uMinY: { value: -5.0 },
-        uMaxY: { value: 12.0 },
-        uGoalColor: { value: new THREE.Color("#fbbf24") },
-        uIsGoal: { value: isGoal ? 1.0 : 0.0 }
-    }), [isDecor, isGoal]);
+        uColorBottom: { value: new THREE.Color(isDecor ? activePalette.skyBottom : activePalette.blockBottom) }, 
+        uColorTop: { value: new THREE.Color(isDecor ? activePalette.skyTop : activePalette.blockTop) },   
+        uMinY: { value: -10.0 },
+        uMaxY: { value: 90.0 }, 
+        uGoalColor: { value: new THREE.Color(activePalette.goal) },
+        uIsGoal: { value: isGoal ? 1.0 : 0.0 },
+        uHueOffset: { value: hueOffset * Math.PI * 2 }
+    }), [activePalette, isDecor, isGoal, hueOffset]);
 
     const onBeforeCompile = useMemo(() => (shader: THREE.Shader) => {
-        shader.uniforms.uColorBottom = uniforms.uColorBottom;
-        shader.uniforms.uColorTop = uniforms.uColorTop;
-        shader.uniforms.uMinY = uniforms.uMinY;
-        shader.uniforms.uMaxY = uniforms.uMaxY;
-        shader.uniforms.uGoalColor = uniforms.uGoalColor;
-        shader.uniforms.uIsGoal = uniforms.uIsGoal;
+        Object.assign(shader.uniforms, uniforms);
 
-        // Inject uniform definitions
         shader.vertexShader = `
             varying vec3 vWorldPosition;
             ${shader.vertexShader}
         `;
 
-        // Capture world position in vertex shader
         shader.vertexShader = shader.vertexShader.replace(
             '#include <worldpos_vertex>',
             `
@@ -46,7 +48,6 @@ const useContinuousGradient = (isDecor: boolean, isGoal: boolean) => {
             `
         );
 
-        // Inject uniforms in fragment shader
         shader.fragmentShader = `
             uniform vec3 uColorBottom;
             uniform vec3 uColorTop;
@@ -54,11 +55,14 @@ const useContinuousGradient = (isDecor: boolean, isGoal: boolean) => {
             uniform float uMaxY;
             uniform float uIsGoal;
             uniform vec3 uGoalColor;
+            uniform float uHueOffset;
             varying vec3 vWorldPosition;
+            
+            ${HUE_SHIFT_GLSL}
+            
             ${shader.fragmentShader}
         `;
 
-        // Override color calculation
         shader.fragmentShader = shader.fragmentShader.replace(
             '#include <color_fragment>',
             `
@@ -66,22 +70,21 @@ const useContinuousGradient = (isDecor: boolean, isGoal: boolean) => {
             float t = smoothstep(uMinY, uMaxY, vWorldPosition.y);
             vec3 gradientColor = mix(uColorBottom, uColorTop, t);
             
-            // Apply goal override
-            vec3 finalColor = mix(gradientColor, uGoalColor, uIsGoal * 0.8);
+            // Apply Random Hue Shift
+            gradientColor = hueShift(gradientColor, uHueOffset);
+            
+            vec3 finalColor = mix(gradientColor, uGoalColor, uIsGoal * 0.9);
             
             diffuseColor.rgb = finalColor;
             `
         );
 
-        // Inject Emissive Logic for Glow
         shader.fragmentShader = shader.fragmentShader.replace(
             '#include <emissivemap_fragment>',
             `
             #include <emissivemap_fragment>
-            // Glow intensity varies by height and type
             float glow = 0.5 + 0.5 * smoothstep(uMinY, uMaxY, vWorldPosition.y);
-            float intensity = uIsGoal > 0.5 ? 2.0 : (0.4 * glow);
-            
+            float intensity = uIsGoal > 0.5 ? 3.0 : (0.8 * glow);
             totalEmissiveRadiance += diffuseColor.rgb * intensity;
             `
         );
@@ -91,64 +94,80 @@ const useContinuousGradient = (isDecor: boolean, isGoal: boolean) => {
 };
 
 export const LevelGeometry: React.FC<GeometryProps> = ({ type, isGoal }) => {
-  const isDecor = type === BlockType.PILLAR || type === BlockType.DECOR || type === BlockType.SPIRE;
+  const isDecor = type === BlockType.PILLAR || type === BlockType.DECOR || type === BlockType.SPIRE || type === BlockType.WALL;
   const { onBeforeCompile } = useContinuousGradient(isDecor, !!isGoal);
 
+  // Define geometries for architectural elements
   return (
     <group>
-        {/* Main Block Body - SEAMLESS (No RoundedBox) */}
-        <mesh castShadow receiveShadow>
-             <boxGeometry args={[1, 1, 1]} />
-             <meshStandardMaterial 
-                roughness={0.1} 
-                metalness={0.2}
-                onBeforeCompile={onBeforeCompile}
-                toneMapped={false} // Allow colors to exceed 1.0 for Bloom
-             />
-        </mesh>
-
-        {/* Walkable Top Highlight (Optional, keeps path clear) */}
-        {!isDecor && !isGoal && (
-             <mesh position={[0, 0.501, 0]} rotation={[-Math.PI/2, 0, 0]} receiveShadow>
-                <planeGeometry args={[0.9, 0.9]} />
+        {/* Standard Walkable Block or Foundation */}
+        {(type === BlockType.CUBE || type === BlockType.DECOR || type === BlockType.WALL || type === BlockType.FLOOR) && (
+             <mesh castShadow receiveShadow>
+                <boxGeometry args={[1.01, 1.01, 1.01]} />
                 <meshStandardMaterial 
-                    color="#ffffff" 
-                    transparent 
-                    opacity={0.1}
-                    roughness={0.1} 
+                   roughness={0.2} 
+                   metalness={0.1}
+                   onBeforeCompile={onBeforeCompile}
+                   toneMapped={false}
                 />
-            </mesh>
+             </mesh>
         )}
 
-        {/* Architectural Details based on Type */}
+        {/* Decorative Arch */}
         {type === BlockType.ARCH && (
-            <mesh position={[0, 0, 0.2]}>
-                <boxGeometry args={[0.6, 0.8, 0.82]} />
-                <meshStandardMaterial color="#1e1b4b" />
-            </mesh>
+            <group>
+                {/* Frame */}
+                <mesh castShadow receiveShadow>
+                     <boxGeometry args={[1.01, 1.01, 0.4]} />
+                     <meshStandardMaterial roughness={0.2} onBeforeCompile={onBeforeCompile} toneMapped={false}/>
+                </mesh>
+                <mesh position={[0, 0, 0]} castShadow receiveShadow>
+                    <torusGeometry args={[0.35, 0.15, 8, 16, Math.PI]} />
+                    <meshStandardMaterial roughness={0.2} onBeforeCompile={onBeforeCompile} toneMapped={false}/>
+                </mesh>
+            </group>
         )}
         
-        {type === BlockType.DOME && (
-             <mesh position={[0, 0.5, 0]}>
-                 <sphereGeometry args={[0.45, 16, 16, 0, Math.PI * 2, 0, Math.PI/2]} />
-                 <meshStandardMaterial color="#fcd34d" metalness={0.6} roughness={0.2} emissive="#fcd34d" emissiveIntensity={0.5} />
-             </mesh>
+        {/* Classical Pillar */}
+        {type === BlockType.PILLAR && (
+            <group>
+                <mesh castShadow receiveShadow>
+                    <cylinderGeometry args={[0.3, 0.3, 1.01, 16]} />
+                    <meshStandardMaterial roughness={0.2} onBeforeCompile={onBeforeCompile} toneMapped={false}/>
+                </mesh>
+                {/* Capital/Base */}
+                <mesh position={[0, 0.45, 0]} castShadow receiveShadow>
+                    <cylinderGeometry args={[0.4, 0.35, 0.1, 8]} />
+                    <meshStandardMaterial roughness={0.2} onBeforeCompile={onBeforeCompile} toneMapped={false}/>
+                </mesh>
+                 <mesh position={[0, -0.45, 0]} castShadow receiveShadow>
+                    <cylinderGeometry args={[0.35, 0.4, 0.1, 8]} />
+                    <meshStandardMaterial roughness={0.2} onBeforeCompile={onBeforeCompile} toneMapped={false}/>
+                </mesh>
+            </group>
         )}
 
-        {type === BlockType.SPIRE && (
-             <mesh position={[0, 1, 0]} castShadow>
-                 <coneGeometry args={[0.3, 1, 4]} />
-                 <meshStandardMaterial color="#4338ca" metalness={0.5} roughness={0.2} />
-             </mesh>
+        {/* Dome (Goal or Decoration) */}
+        {type === BlockType.DOME && (
+             <group>
+                 <mesh position={[0, 0, 0]} castShadow receiveShadow>
+                     <cylinderGeometry args={[0.45, 0.45, 0.6, 16]} />
+                     <meshStandardMaterial roughness={0.2} onBeforeCompile={onBeforeCompile} toneMapped={false}/>
+                 </mesh>
+                 <mesh position={[0, 0.5, 0]} castShadow receiveShadow>
+                     <sphereGeometry args={[0.45, 16, 16, 0, Math.PI * 2, 0, Math.PI/2]} />
+                     <meshStandardMaterial color="#fbbf24" metalness={0.6} roughness={0.2} emissive="#fbbf24" emissiveIntensity={0.5} />
+                 </mesh>
+             </group>
         )}
-        
+
         {isGoal && (
-            <group position={[0, 1.2, 0]}>
+            <group position={[0, 1.4, 0]}>
                 <mesh>
-                    <octahedronGeometry args={[0.3, 0]} />
-                    <meshStandardMaterial color="#fbbf24" emissive="#fbbf24" emissiveIntensity={3} toneMapped={false} />
+                    <octahedronGeometry args={[0.25, 0]} />
+                    <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={4} toneMapped={false} />
                 </mesh>
-                <pointLight distance={5} intensity={3} color="#fbbf24" />
+                <pointLight distance={5} intensity={3} color="#ffffff" />
             </group>
         )}
     </group>

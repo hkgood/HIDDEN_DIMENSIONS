@@ -13,7 +13,9 @@ export enum BlockType {
   DOME = 'DOME',
   SPIRE = 'SPIRE',
   LATTICE = 'LATTICE',
-  DECOR = 'DECOR'
+  DECOR = 'DECOR',
+  FLOOR = 'FLOOR',
+  WALL = 'WALL'
 }
 
 export enum GroupType {
@@ -87,6 +89,7 @@ declare global {
       spotLight: any;
       shadowMaterial: any; 
       ocean: any;
+      torusGeometry: any;
       [elemName: string]: any;
     }
   }

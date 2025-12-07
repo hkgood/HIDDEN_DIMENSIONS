@@ -1,11 +1,9 @@
-# Hidden Dimensions
+# 🌌 Ethereal Perspectives / Hidden Dimensions
 
 > **"What you see is where you can walk."**  
 > **"所见即所得，所见即可达。"**
 
 [English](#english) | [中文](#chinese)
-
-<img src="./ScreenShot.png">
 
 ---
 

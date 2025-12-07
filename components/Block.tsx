@@ -1,6 +1,5 @@
 import React from 'react';
 import { Vector3 } from 'three';
-import { Edges } from '@react-three/drei';
 import '../types';
 
 interface BlockProps {
@@ -17,14 +16,12 @@ export const Block: React.FC<BlockProps> = ({ position, isGoal, onClick }) => {
   return (
     <group position={new Vector3(...position)}>
       <mesh onClick={(e) => { e.stopPropagation(); onClick?.(); }} receiveShadow castShadow>
-        <boxGeometry args={[1, 1, 1]} />
+        <boxGeometry args={[1.01, 1.01, 1.01]} />
         <meshStandardMaterial 
           color={color} 
           roughness={0.8}
           metalness={0.1}
         />
-        {/* Adds the comic/outline style */}
-        <Edges color="#aaa" threshold={15} />
       </mesh>
       
       {/* Decorative smaller block below to give "floating" feel if needed */}
