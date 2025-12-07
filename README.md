@@ -5,6 +5,8 @@
 
 [English](#english) | [中文](#chinese)
 
+<img src="./ScreenShot.png" width="400px">
+
 ---
 
 <a name="english"></a>
