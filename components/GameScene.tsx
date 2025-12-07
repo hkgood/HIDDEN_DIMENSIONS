@@ -216,13 +216,13 @@ const SceneWrapper: React.FC = () => {
             <OrthographicCamera makeDefault position={[50, 50, 50]} zoom={30} near={-100} far={300} />
             <CameraRig />
             
-            <ambientLight intensity={0.7} />
+            <ambientLight intensity={0.5} />
             <directionalLight 
-                position={[30, 50, 20]} intensity={2.0} castShadow shadow-mapSize={[2048, 2048]} shadow-bias={-0.0001} 
+                position={[30, 50, 20]} intensity={1.1} castShadow shadow-mapSize={[2048, 2048]} shadow-bias={-0.0001} 
             >
                 <orthographicCamera attach="shadow-camera" args={[-50, 50, -50, 50, 0.1, 100]} />
             </directionalLight>
-            <directionalLight position={[-30, 20, -30]} intensity={1.2} />
+            <directionalLight position={[-30, 20, -30]} intensity={0.8} />
             
             <Particles />
 

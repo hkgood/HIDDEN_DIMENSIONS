@@ -1,5 +1,6 @@
 
 import { Vector3 } from 'three';
+import 'react';
 
 export enum BlockType {
   CUBE = 'CUBE',
@@ -15,7 +16,9 @@ export enum BlockType {
   LATTICE = 'LATTICE',
   DECOR = 'DECOR',
   FLOOR = 'FLOOR',
-  WALL = 'WALL'
+  WALL = 'WALL',
+  ROOF = 'ROOF',
+  SLAB = 'SLAB'
 }
 
 export enum GroupType {
@@ -60,6 +63,39 @@ export enum GameStatus {
   IDLE = 'IDLE',
   PLAYING = 'PLAYING',
   COMPLETED = 'COMPLETED'
+}
+
+declare module 'react' {
+  namespace JSX {
+    interface IntrinsicElements {
+      group: any;
+      mesh: any;
+      boxGeometry: any;
+      meshStandardMaterial: any;
+      cylinderGeometry: any;
+      sphereGeometry: any;
+      planeGeometry: any;
+      meshBasicMaterial: any;
+      coneGeometry: any;
+      circleGeometry: any;
+      octahedronGeometry: any;
+      dodecahedronGeometry: any;
+      instancedMesh: any;
+      fogExp2: any;
+      ambientLight: any;
+      hemisphereLight: any;
+      directionalLight: any;
+      orthographicCamera: any;
+      shaderMaterial: any;
+      primitive: any;
+      pointLight: any;
+      spotLight: any;
+      shadowMaterial: any; 
+      ocean: any;
+      torusGeometry: any;
+      [elemName: string]: any;
+    }
+  }
 }
 
 declare global {

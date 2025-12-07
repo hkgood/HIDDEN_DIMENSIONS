@@ -32,7 +32,7 @@ const useContinuousGradient = (isDecor: boolean, isGoal: boolean) => {
         uHueOffset: { value: hueOffset * Math.PI * 2 }
     }), [activePalette, isDecor, isGoal, hueOffset]);
 
-    const onBeforeCompile = useMemo(() => (shader: THREE.Shader) => {
+    const onBeforeCompile = useMemo(() => (shader: any) => {
         Object.assign(shader.uniforms, uniforms);
 
         shader.vertexShader = `
@@ -84,7 +84,7 @@ const useContinuousGradient = (isDecor: boolean, isGoal: boolean) => {
             `
             #include <emissivemap_fragment>
             float glow = 0.5 + 0.5 * smoothstep(uMinY, uMaxY, vWorldPosition.y);
-            float intensity = uIsGoal > 0.5 ? 3.0 : (0.8 * glow);
+            float intensity = uIsGoal > 0.5 ? 3.0 : (0.25 * glow);
             totalEmissiveRadiance += diffuseColor.rgb * intensity;
             `
         );
@@ -94,7 +94,7 @@ const useContinuousGradient = (isDecor: boolean, isGoal: boolean) => {
 };
 
 export const LevelGeometry: React.FC<GeometryProps> = ({ type, isGoal }) => {
-  const isDecor = type === BlockType.PILLAR || type === BlockType.DECOR || type === BlockType.SPIRE || type === BlockType.WALL;
+  const isDecor = type === BlockType.PILLAR || type === BlockType.DECOR || type === BlockType.SPIRE || type === BlockType.WALL || type === BlockType.ROOF;
   const { onBeforeCompile } = useContinuousGradient(isDecor, !!isGoal);
 
   // Define geometries for architectural elements
@@ -105,25 +105,34 @@ export const LevelGeometry: React.FC<GeometryProps> = ({ type, isGoal }) => {
              <mesh castShadow receiveShadow>
                 <boxGeometry args={[1.01, 1.01, 1.01]} />
                 <meshStandardMaterial 
-                   roughness={0.2} 
+                   roughness={0.6} 
                    metalness={0.1}
                    onBeforeCompile={onBeforeCompile}
                    toneMapped={false}
                 />
              </mesh>
         )}
+        
+        {/* Stairs */}
+        {type === BlockType.STAIR && (
+             <mesh castShadow receiveShadow>
+                 {/* Visual ramp but logical block */}
+                 <boxGeometry args={[1.01, 1.01, 1.01]} /> 
+                 {/* Ideally this would be a ramp geometry, keeping box for simplicity of seamless shader */}
+                 <meshStandardMaterial roughness={0.6} onBeforeCompile={onBeforeCompile} toneMapped={false}/>
+             </mesh>
+        )}
 
         {/* Decorative Arch */}
         {type === BlockType.ARCH && (
             <group>
-                {/* Frame */}
                 <mesh castShadow receiveShadow>
                      <boxGeometry args={[1.01, 1.01, 0.4]} />
-                     <meshStandardMaterial roughness={0.2} onBeforeCompile={onBeforeCompile} toneMapped={false}/>
+                     <meshStandardMaterial roughness={0.6} onBeforeCompile={onBeforeCompile} toneMapped={false}/>
                 </mesh>
                 <mesh position={[0, 0, 0]} castShadow receiveShadow>
                     <torusGeometry args={[0.35, 0.15, 8, 16, Math.PI]} />
-                    <meshStandardMaterial roughness={0.2} onBeforeCompile={onBeforeCompile} toneMapped={false}/>
+                    <meshStandardMaterial roughness={0.6} onBeforeCompile={onBeforeCompile} toneMapped={false}/>
                 </mesh>
             </group>
         )}
@@ -133,18 +142,34 @@ export const LevelGeometry: React.FC<GeometryProps> = ({ type, isGoal }) => {
             <group>
                 <mesh castShadow receiveShadow>
                     <cylinderGeometry args={[0.3, 0.3, 1.01, 16]} />
-                    <meshStandardMaterial roughness={0.2} onBeforeCompile={onBeforeCompile} toneMapped={false}/>
+                    <meshStandardMaterial roughness={0.6} onBeforeCompile={onBeforeCompile} toneMapped={false}/>
                 </mesh>
                 {/* Capital/Base */}
                 <mesh position={[0, 0.45, 0]} castShadow receiveShadow>
                     <cylinderGeometry args={[0.4, 0.35, 0.1, 8]} />
-                    <meshStandardMaterial roughness={0.2} onBeforeCompile={onBeforeCompile} toneMapped={false}/>
+                    <meshStandardMaterial roughness={0.6} onBeforeCompile={onBeforeCompile} toneMapped={false}/>
                 </mesh>
                  <mesh position={[0, -0.45, 0]} castShadow receiveShadow>
                     <cylinderGeometry args={[0.35, 0.4, 0.1, 8]} />
-                    <meshStandardMaterial roughness={0.2} onBeforeCompile={onBeforeCompile} toneMapped={false}/>
+                    <meshStandardMaterial roughness={0.6} onBeforeCompile={onBeforeCompile} toneMapped={false}/>
                 </mesh>
             </group>
+        )}
+        
+        {/* ROOF (Pyramid) */}
+        {type === BlockType.ROOF && (
+             <mesh castShadow receiveShadow>
+                 <coneGeometry args={[0.72, 1.0, 4]} /> 
+                 <meshStandardMaterial roughness={0.6} onBeforeCompile={onBeforeCompile} toneMapped={false}/>
+             </mesh>
+        )}
+        
+        {/* SLAB (Half Block) */}
+        {type === BlockType.SLAB && (
+             <mesh castShadow receiveShadow position={[0, -0.25, 0]}>
+                 <boxGeometry args={[1.01, 0.5, 1.01]} />
+                 <meshStandardMaterial roughness={0.6} onBeforeCompile={onBeforeCompile} toneMapped={false}/>
+             </mesh>
         )}
 
         {/* Dome (Goal or Decoration) */}
@@ -152,11 +177,11 @@ export const LevelGeometry: React.FC<GeometryProps> = ({ type, isGoal }) => {
              <group>
                  <mesh position={[0, 0, 0]} castShadow receiveShadow>
                      <cylinderGeometry args={[0.45, 0.45, 0.6, 16]} />
-                     <meshStandardMaterial roughness={0.2} onBeforeCompile={onBeforeCompile} toneMapped={false}/>
+                     <meshStandardMaterial roughness={0.6} onBeforeCompile={onBeforeCompile} toneMapped={false}/>
                  </mesh>
                  <mesh position={[0, 0.5, 0]} castShadow receiveShadow>
                      <sphereGeometry args={[0.45, 16, 16, 0, Math.PI * 2, 0, Math.PI/2]} />
-                     <meshStandardMaterial color="#fbbf24" metalness={0.6} roughness={0.2} emissive="#fbbf24" emissiveIntensity={0.5} />
+                     <meshStandardMaterial color="#fbbf24" metalness={0.6} roughness={0.6} emissive="#fbbf24" emissiveIntensity={0.5} />
                  </mesh>
              </group>
         )}
