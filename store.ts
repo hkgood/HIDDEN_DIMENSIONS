@@ -349,6 +349,20 @@ export interface GroupState {
   offsetValue: number;
 }
 
+// 海洋配置
+export interface OceanConfig {
+  speed: number;        // 波浪速度 (0-3)
+  height: number;       // 波浪高度 (0-4)
+  density: number;      // 波浪密度/频率 (0.5-3)
+}
+
+// 音色信息
+export interface TimbreInfo {
+  name: string;         // 英文名称
+  nameCN: string;       // 中文名称
+  type: string;         // 音色类型
+}
+
 interface GameState {
   status: GameStatus;
   level: LevelData;
@@ -361,10 +375,14 @@ interface GameState {
   activePalette: Palette;
   hueOffset: number; // 0 to 1
   archetype: string;
+  timbre: TimbreInfo;  // 当前音色信息
 
   // Camera State
   cameraZoom: number;
   cameraY: number;
+
+  // Ocean Configuration
+  oceanConfig: OceanConfig;
 
   initGame: () => void;
   regenerateWorld: () => void;
@@ -377,6 +395,9 @@ interface GameState {
   // Camera Actions
   setCameraZoom: (d: number) => void;
   setCameraY: (d: number) => void;
+
+  // Ocean Actions
+  setOceanConfig: (config: Partial<OceanConfig>) => void;
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -390,12 +411,23 @@ export const useGameStore = create<GameState>((set, get) => ({
   activePalette: PALETTES[0],
   hueOffset: 0,
   archetype: 'Grand Aqueduct',
+  timbre: { name: 'Crystal Bells', nameCN: '水晶钟琴', type: 'bells' },
   
   cameraZoom: 35,
-  cameraY: 10, 
+  cameraY: 10,
+
+  // 海洋默认配置
+  oceanConfig: {
+    speed: 0.4,
+    height: 1.2,
+    density: 2.0,
+  }, 
 
   initGame: async () => {
     await audioService.initialize();
+    // 获取音色信息
+    const timbreInfo = audioService.getTimbreInfo();
+    set({ timbre: timbreInfo });
     get().regenerateWorld();
     set({ status: GameStatus.PLAYING });
   },
@@ -616,5 +648,9 @@ export const useGameStore = create<GameState>((set, get) => ({
         set({ status: GameStatus.COMPLETED });
         audioService.playWin();
     }
+  },
+
+  setOceanConfig: (config: Partial<OceanConfig>) => {
+    set(s => ({ oceanConfig: { ...s.oceanConfig, ...config } }));
   }
 }));

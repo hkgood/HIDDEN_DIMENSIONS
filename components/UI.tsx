@@ -3,8 +3,80 @@ import React from 'react';
 import { useGameStore } from '../store';
 import { GameStatus } from '../types';
 
+// 海洋控制面板组件
+const OceanControls: React.FC = () => {
+  const { oceanConfig, setOceanConfig } = useGameStore();
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  return (
+    <div className="absolute top-6 right-6 pointer-events-auto">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="text-[10px] text-white/60 hover:text-white border border-white/20 px-3 py-1.5 rounded hover:bg-white/10 transition-colors uppercase tracking-wider"
+      >
+        {isOpen ? '✕ Ocean' : '≈ Ocean'}
+      </button>
+      
+      {isOpen && (
+        <div className="mt-2 bg-black/40 backdrop-blur-md p-4 rounded-lg border border-white/10 w-64 space-y-3">
+          {/* 波浪高度 */}
+          <div className="space-y-1">
+            <div className="flex justify-between text-[9px] uppercase tracking-wider text-white/60">
+              <label>Height</label>
+              <span>{oceanConfig.height.toFixed(1)}</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="4"
+              step="0.1"
+              value={oceanConfig.height}
+              onChange={(e) => setOceanConfig({ height: parseFloat(e.target.value) })}
+              className="w-full h-1 bg-white/20 rounded appearance-none cursor-pointer accent-teal-400"
+            />
+          </div>
+
+          {/* 波浪速度 */}
+          <div className="space-y-1">
+            <div className="flex justify-between text-[9px] uppercase tracking-wider text-white/60">
+              <label>Speed</label>
+              <span>{oceanConfig.speed.toFixed(1)}</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="3"
+              step="0.1"
+              value={oceanConfig.speed}
+              onChange={(e) => setOceanConfig({ speed: parseFloat(e.target.value) })}
+              className="w-full h-1 bg-white/20 rounded appearance-none cursor-pointer accent-teal-400"
+            />
+          </div>
+
+          {/* 波浪密度 */}
+          <div className="space-y-1">
+            <div className="flex justify-between text-[9px] uppercase tracking-wider text-white/60">
+              <label>Frequency</label>
+              <span>{oceanConfig.density.toFixed(1)}</span>
+            </div>
+            <input
+              type="range"
+              min="0.5"
+              max="3"
+              step="0.1"
+              value={oceanConfig.density}
+              onChange={(e) => setOceanConfig({ density: parseFloat(e.target.value) })}
+              className="w-full h-1 bg-white/20 rounded appearance-none cursor-pointer accent-teal-400"
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const UI: React.FC = () => {
-  const { status, initGame, rotateView, isRotatingView, activePalette, archetype, regenerateWorld } = useGameStore();
+  const { status, initGame, rotateView, isRotatingView, activePalette, archetype, timbre, regenerateWorld } = useGameStore();
 
   if (status === GameStatus.IDLE) {
     return (
@@ -51,6 +123,13 @@ export const UI: React.FC = () => {
                 <div className="w-1.5 h-1.5 rounded-full bg-white"></div>
                 <span className="text-[10px] tracking-wider uppercase opacity-70 text-white">{activePalette.name}</span>
             </div>
+            {/* 音色信息 */}
+            <div className="flex items-center gap-2 pl-3 mt-0.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse"></div>
+                <span className="text-[10px] tracking-wider uppercase opacity-70 text-teal-300">
+                  {timbre.nameCN}
+                </span>
+            </div>
             <button 
                 onClick={regenerateWorld} 
                 className="mt-2 ml-3 text-[10px] text-white/60 hover:text-white border border-white/20 px-2 py-1 rounded hover:bg-white/10 transition-colors uppercase tracking-wider"
@@ -59,6 +138,9 @@ export const UI: React.FC = () => {
             </button>
         </div>
       </div>
+
+      {/* Ocean Controls - Top Right */}
+      <OceanControls />
 
       {/* Rotation Controls - Perfect Ratio */}
       <div className="absolute bottom-12 right-12 flex gap-6 pointer-events-auto">

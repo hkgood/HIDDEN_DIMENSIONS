@@ -75,25 +75,44 @@ export const Player: React.FC = () => {
   return (
     <animated.group position={spring.position as any} ref={groupRef}>
         <group>
-            {/* Body: Cone */}
-            <mesh castShadow receiveShadow position={[0, 0.3, 0]}>
-                <coneGeometry args={[0.2, 0.6, 16]} />
-                <meshStandardMaterial color="#f472b6" emissive="#be185d" emissiveIntensity={0.2} />
+            {/* 左腿 - Left Leg (露出在裙摆下方) */}
+            <mesh castShadow receiveShadow position={[-0.08, -0.1, 0]}>
+                <cylinderGeometry args={[0.04, 0.04, 0.2, 8]} />
+                <meshStandardMaterial color="#000000" />
             </mesh>
-            {/* Head: Sphere */}
+            
+            {/* 右腿 - Right Leg (露出在裙摆下方) */}
+            <mesh castShadow receiveShadow position={[0.08, -0.1, 0]}>
+                <cylinderGeometry args={[0.04, 0.04, 0.2, 8]} />
+                <meshStandardMaterial color="#000000" />
+            </mesh>
+
+            {/* 裙子 - Skirt: 缩短高度并上移，与头部略有重叠 */}
+            <mesh castShadow receiveShadow position={[0, 0.4, 0]}>
+                <coneGeometry args={[0.24, 0.4, 16]} />
+                <meshStandardMaterial 
+                    color="#f472b6" 
+                    emissive="#ec4899" 
+                    emissiveIntensity={0.4}
+                />
+            </mesh>
+            
+            {/* 头部 - Head: 上移以配合裙子重叠 */}
             <mesh castShadow position={[0, 0.7, 0]}>
                 <sphereGeometry args={[0.15, 16, 16]} />
                 <meshStandardMaterial color="#ffffff" />
             </mesh>
-             {/* Crown */}
-             <mesh position={[0, 0.88, 0]}>
-                 <cylinderGeometry args={[0.1, 0.05, 0.1, 8]} />
-                 <meshStandardMaterial color="#fcd34d" metalness={0.8} roughness={0.2} />
-             </mesh>
+            
+            {/* 皇冠 - Crown */}
+            <mesh position={[0, 0.88, 0]}>
+                <cylinderGeometry args={[0.1, 0.05, 0.1, 8]} />
+                <meshStandardMaterial color="#fcd34d" metalness={0.8} roughness={0.2} />
+            </mesh>
         </group>
-        {/* Shadow */}
-        <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-            <circleGeometry args={[0.2, 32]} />
+        
+        {/* 阴影 - Shadow */}
+        <mesh position={[0, -0.19, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <circleGeometry args={[0.22, 32]} />
             <meshBasicMaterial color="#000000" transparent opacity={0.4} />
         </mesh>
     </animated.group>
