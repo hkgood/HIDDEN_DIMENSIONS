@@ -32,16 +32,19 @@ export const PolyOcean: React.FC = () => {
   // 当前实际使用的色相偏移（用于动画过渡）
   const [currentHueOffset, setCurrentHueOffset] = useState(idleHueOffset);
   
-  // 监听状态变化，平滑过渡色相
+  // 锁定的过渡目标（避免中途 hueOffset 变化导致二次跳变）
+  const [targetHueOffset, setTargetHueOffset] = useState(idleHueOffset);
+  
+  // 监听状态变化，锁定过渡目标
   useEffect(() => {
     if (status === GameStatus.IDLE) {
-      // IDLE 状态：保持随机颜色
-      setCurrentHueOffset(idleHueOffset);
+      // IDLE 状态：目标是随机颜色
+      setTargetHueOffset(idleHueOffset);
     } else if (status === GameStatus.PLAYING) {
-      // PLAYING 状态：目标是 store 的 hueOffset
-      // 实际过渡在 useFrame 中实现
+      // PLAYING 状态：锁定当前 hueOffset 作为目标，之后不再改变
+      setTargetHueOffset(hueOffset);
     }
-  }, [status, idleHueOffset]);
+  }, [status]); // 只监听 status，不监听 hueOffset 避免二次跳变
   
   // 基础颜色（从 palette 提取）
   const BASE_DEEP = useMemo(() => new THREE.Color(activePalette.waterDeep), [activePalette.waterDeep]);
@@ -73,16 +76,16 @@ export const PolyOcean: React.FC = () => {
     if (!meshRef.current) return;
 
     // 平滑过渡色相偏移
-    const targetHue = status === GameStatus.PLAYING ? hueOffset : idleHueOffset;
+    // 使用锁定的目标，避免 hueOffset 变化导致二次跳变
     setCurrentHueOffset(prev => {
-      const diff = targetHue - prev;
+      const diff = targetHueOffset - prev;
       // 处理色相环的最短路径（0-1循环）
       let shortestDiff = diff;
       if (Math.abs(diff) > 0.5) {
         shortestDiff = diff > 0 ? diff - 1 : diff + 1;
       }
-      // 使用 lerp 平滑过渡（速度：2）
-      return (prev + shortestDiff * delta * 2 + 1) % 1;
+      // 使用 lerp 平滑过渡（速度：0.5 = 约2秒完成过渡）
+      return (prev + shortestDiff * delta * 0.5 + 1) % 1;
     });
 
     const time = state.clock.getElapsedTime();
