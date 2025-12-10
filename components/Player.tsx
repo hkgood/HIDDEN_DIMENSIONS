@@ -1,34 +1,55 @@
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState, memo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Vector3, Group } from 'three';
 import { useSpring, animated } from '@react-spring/three';
 import { useGameStore } from '../store';
 import { GroupType, Axis } from '../types';
 
-export const Player: React.FC = () => {
-  const { playerNodeId, level, groupStates } = useGameStore();
+// 移动类型枚举
+enum MoveType {
+  WALK = 'WALK',
+  CLIMB_UP = 'CLIMB_UP',
+  JUMP_DOWN = 'JUMP_DOWN'
+}
+
+const PlayerComponent: React.FC = () => {
+  const playerNodeId = useGameStore(state => state.playerNodeId);
+  const level = useGameStore(state => state.level);
+  const groupStates = useGameStore(state => state.groupStates);
+  
   const groupRef = useRef<Group>(null);
+  const bodyRef = useRef<any>(null);
+  const [currentMoveType, setCurrentMoveType] = useState<MoveType>(MoveType.WALK);
   
-  // Calculate Target Logic
-  const node = level.nodes.find(n => n.id === playerNodeId);
+  // 🔧 使用 ref 存储当前位置（不会因为组件重新渲染而丢失）
+  const currentPositionRef = useRef<Vector3 | null>(null);
+  const hasInitialized = useRef(false);
   
-  const getDynamicPosition = () => {
-      // Default to 0,0,0 if node not found to prevent crash, but should not happen
-      if (!node) return new Vector3(0, 0, 0); 
+  const [spring, api] = useSpring(() => ({
+    position: [0, 0.5, 0],
+    config: { tension: 170, friction: 26 }
+  }));
 
-      const state = groupStates[node.groupId];
-      if (!state) return new Vector3(...node.localPos);
-
-      const local = new Vector3(...node.localPos);
-
+  // 🔧 核心：只在 playerNodeId 改变时计算并更新位置
+  useEffect(() => {
+    // 计算目标位置
+    const node = level.nodes.find(n => n.id === playerNodeId);
+    if (!node) {
+      return;
+    }
+    
+    const state = groupStates[node.groupId];
+    let local = new Vector3(...node.localPos);
+    
+    if (state) {
       if (state.type === GroupType.ROTATOR && state.pivot) {
         const pivot = new Vector3(...state.pivot);
         local.sub(pivot);
         local.applyAxisAngle(new Vector3(0, 1, 0), state.rotationValue * (Math.PI / 2)); 
         local.add(pivot);
       }
-
+      
       if (state.type === GroupType.SLIDER && state.axis) {
         const axisVec = new Vector3(
            state.axis === Axis.X ? 1 : 0,
@@ -37,44 +58,112 @@ export const Player: React.FC = () => {
         );
         local.add(axisVec.multiplyScalar(state.offsetValue));
       }
-
+      
       local.add(new Vector3(...state.initialPos));
-      return local;
-  }
-
-  const targetPos = getDynamicPosition();
-  const [spring, api] = useSpring(() => ({
-    position: [targetPos.x, targetPos.y + 0.5, targetPos.z],
-    config: { tension: 170, friction: 26 }
-  }));
-
-  useEffect(() => {
-    // Animate to new position
-    // Add a small hop in Y
-    const x = targetPos.x;
-    const y = targetPos.y + 0.5;
-    const z = targetPos.z;
+    }
     
-    api.start({
-        to: [
-            { position: [x, y + 0.4, z] }, // Hop up
-            { position: [x, y, z] }        // Land
-        ],
-        config: { duration: 150 }
-    });
-  }, [playerNodeId, groupStates, api]); // Update when player moves or group moves
+    const targetX = local.x;
+    const targetY = local.y + 0.5;
+    const targetZ = local.z;
+    
+    // 🔧 初始化：第一次加载时直接设置位置
+    if (!hasInitialized.current) {
+      currentPositionRef.current = new Vector3(targetX, targetY, targetZ);
+      api.start({ position: [targetX, targetY, targetZ], immediate: true });
+      hasInitialized.current = true;
+      return;
+    }
+    
+    // 🔧 移动动画：从当前位置到目标位置
+    const prevPos = currentPositionRef.current;
+    if (!prevPos) {
+      currentPositionRef.current = new Vector3(targetX, targetY, targetZ);
+      api.start({ position: [targetX, targetY, targetZ], immediate: true });
+      return;
+    }
+    
+    const heightDiff = targetY - prevPos.y;
+    
+    // 判断移动类型
+    let moveType = MoveType.WALK;
+    if (Math.abs(heightDiff) > 0.2) {
+      if (heightDiff > 0) {
+        moveType = MoveType.CLIMB_UP;
+      } else {
+        moveType = MoveType.JUMP_DOWN;
+      }
+    }
+    
+    setCurrentMoveType(moveType);
+    
+    // 根据移动类型选择不同的动画
+    switch (moveType) {
+      case MoveType.WALK:
+        api.start({
+            to: [
+                { position: [targetX, targetY + 0.15, targetZ] },
+                { position: [targetX, targetY, targetZ] }
+            ],
+            config: { duration: 150 }
+        });
+        break;
+        
+      case MoveType.CLIMB_UP:
+        api.start({
+            to: [
+                { position: [targetX, targetY - 0.3, targetZ] },
+                { position: [targetX, targetY + 0.2, targetZ] },
+                { position: [targetX, targetY, targetZ] }
+            ],
+            config: { duration: 200 }
+        });
+        break;
+        
+      case MoveType.JUMP_DOWN:
+        const fallHeight = Math.abs(heightDiff);
+        api.start({
+            to: [
+                { position: [prevPos.x, prevPos.y + 0.2, prevPos.z] },
+                { position: [targetX, targetY + 0.1, targetZ] },
+                { position: [targetX, targetY - 0.1, targetZ] },
+                { position: [targetX, targetY, targetZ] }
+            ],
+            config: { duration: Math.min(300, 150 + fallHeight * 50) }
+        });
+        break;
+    }
+    
+    // 🔧 更新当前位置
+    currentPositionRef.current.set(targetX, targetY, targetZ);
+  }, [playerNodeId, api, level.nodes, groupStates]);
 
   useFrame((state) => {
-      if(groupRef.current) {
-          // Idle floating
+      if (groupRef.current && bodyRef.current) {
           const t = state.clock.elapsedTime;
-          groupRef.current.children[0].position.y = Math.sin(t * 3) * 0.05;
+          const bodyFloat = Math.sin(t * 3) * 0.05;
+          
+          bodyRef.current.position.y = bodyFloat;
+          
+          // 根据移动类型添加不同的身体动画
+          if (currentMoveType === MoveType.WALK) {
+            bodyRef.current.rotation.y = Math.sin(t * 2) * 0.1;
+          } else if (currentMoveType === MoveType.CLIMB_UP) {
+            bodyRef.current.rotation.x = Math.sin(t * 4) * 0.05;
+            bodyRef.current.rotation.y = Math.sin(t * 2) * 0.05;
+          } else if (currentMoveType === MoveType.JUMP_DOWN) {
+            bodyRef.current.rotation.z = Math.sin(t * 3) * 0.1;
+          } else {
+            bodyRef.current.rotation.y = Math.sin(t * 2) * 0.1;
+          }
       }
   });
 
+  const position = spring.position as any;
+  
   return (
-    <animated.group position={spring.position as any} ref={groupRef}>
-        <group>
+    // @ts-ignore
+    <animated.group position={position} ref={groupRef}>
+        <group ref={bodyRef}>
             {/* 左腿 - Left Leg (露出在裙摆下方) */}
             <mesh castShadow receiveShadow position={[-0.08, -0.1, 0]}>
                 <cylinderGeometry args={[0.04, 0.04, 0.2, 8]} />
@@ -118,3 +207,9 @@ export const Player: React.FC = () => {
     </animated.group>
   );
 };
+
+// 🔧 使用 React.memo 防止父组件重新渲染时 Player 也重新渲染
+export const Player = memo(PlayerComponent, (prevProps, nextProps) => {
+  // Player 没有 props，所以永远返回 true（不重新渲染）
+  return true;
+});

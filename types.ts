@@ -5,6 +5,7 @@ import 'react';
 export enum BlockType {
   CUBE = 'CUBE',
   STAIR = 'STAIR',
+  RAMP = 'RAMP', // 斜坡 - 用于平滑上升
   ARCH = 'ARCH',
   ROUNDED = 'ROUNDED',
   PORTAL = 'PORTAL',
@@ -18,7 +19,10 @@ export enum BlockType {
   FLOOR = 'FLOOR',
   WALL = 'WALL',
   ROOF = 'ROOF',
-  SLAB = 'SLAB'
+  SLAB = 'SLAB',
+  TENON = 'TENON',
+  MORTISE = 'MORTISE',
+  PAVILION_ROOF = 'PAVILION_ROOF'
 }
 
 export enum GroupType {
@@ -40,6 +44,7 @@ export interface GameNode {
   type: BlockType;
   isWalkable: boolean;
   isGoal?: boolean;
+  isOpticalBridge?: boolean; // 视错觉桥接点标记
   portalTargetId?: number; // If this is a portal, where does it go?
   rotation?: [number, number, number]; // Visual rotation of the block itself
 }

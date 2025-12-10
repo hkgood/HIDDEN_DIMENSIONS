@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 自定义样式 */
+body {
+  margin: 0;
+  overflow: hidden;
+  background: #e0f2fe;
+}
+
+canvas {
+  touch-action: none;
+}
+
+/* 自定义光标用于交互 */
+.cursor-grab {
+  cursor: grab;
+}
+
+.cursor-grabbing {
+  cursor: grabbing;
+}
+

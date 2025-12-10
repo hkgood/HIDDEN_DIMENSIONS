@@ -75,6 +75,52 @@ const OceanControls: React.FC = () => {
   );
 };
 
+// 关卡选择组件
+const LevelSelector: React.FC = () => {
+  const { regenerateWorld, archetype } = useGameStore();
+  const [isOpen, setIsOpen] = React.useState(false);
+  
+  const levels = ['The Parthenon', 'Jade Pagoda', 'Habitat 67', 'Grand Aqueduct', 'Tower of Babel', 'Hanging Gardens', 'Mortise Lock', 'Garden Window', 'The Ink Scroll', 'Moon Reflection', 'Bagua Maze'];
+
+  return (
+    <div className="relative pointer-events-auto ml-3 mt-2">
+       <button 
+          onClick={() => setIsOpen(!isOpen)}
+          className="text-[10px] text-white/60 hover:text-white border border-white/20 px-2 py-1 rounded hover:bg-white/10 transition-colors uppercase tracking-wider flex items-center gap-2"
+        >
+          <span>Load Level</span>
+          <span className="text-[8px] opacity-50">▼</span>
+        </button>
+        
+        {isOpen && (
+            <div className="absolute top-full left-0 mt-1 bg-black/80 backdrop-blur-md border border-white/20 rounded w-40 max-h-64 overflow-y-auto z-50">
+                <button
+                    onClick={() => {
+                         regenerateWorld(); // Random
+                         setIsOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-[10px] uppercase tracking-wider hover:bg-white/10 transition-colors text-yellow-400 border-b border-white/10"
+                >
+                    🎲 Random
+                </button>
+                {levels.map(l => (
+                    <button
+                        key={l}
+                        onClick={() => {
+                            regenerateWorld(l);
+                            setIsOpen(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 text-[10px] uppercase tracking-wider hover:bg-white/10 transition-colors ${l === archetype ? 'text-teal-400' : 'text-white/70'}`}
+                    >
+                        {l}
+                    </button>
+                ))}
+            </div>
+        )}
+    </div>
+  )
+}
+
 export const UI: React.FC = () => {
   const { status, initGame, rotateView, isRotatingView, activePalette, archetype, timbre, regenerateWorld } = useGameStore();
 
@@ -130,12 +176,7 @@ export const UI: React.FC = () => {
                   {timbre.nameCN}
                 </span>
             </div>
-            <button 
-                onClick={regenerateWorld} 
-                className="mt-2 ml-3 text-[10px] text-white/60 hover:text-white border border-white/20 px-2 py-1 rounded hover:bg-white/10 transition-colors uppercase tracking-wider"
-            >
-                Regenerate
-            </button>
+            <LevelSelector />
         </div>
       </div>
 

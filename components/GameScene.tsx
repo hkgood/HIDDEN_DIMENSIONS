@@ -94,7 +94,7 @@ const CameraRig: React.FC = () => {
 
 // --- Main Scene Wrapper for Gestures ---
 const SceneWrapper: React.FC = () => {
-    const { status, setCameraZoom } = useGameStore();
+    const { status, setCameraZoom, theme } = useGameStore();
 
     // Attach gestures to window to allow panning over the entire page without capturing issues.
     // When targeting window, useGesture does NOT return a bind function, it handles events internally.
@@ -113,14 +113,22 @@ const SceneWrapper: React.FC = () => {
             <OrthographicCamera makeDefault position={[50, 50, 50]} zoom={30} near={-100} far={300} />
             <CameraRig />
             
-            <ambientLight intensity={0.5} />
+            <ambientLight intensity={0.8} color={theme?.lighting?.ambient || "#ffffff"} />
             <directionalLight 
-                position={[30, 50, 20]} intensity={1.1} castShadow shadow-mapSize={[2048, 2048]} shadow-bias={-0.0001} 
+                position={[30, 50, 20]} 
+                intensity={1.2} 
+                color={theme?.lighting?.directional || "#ffffff"}
+                castShadow 
+                shadow-mapSize={[2048, 2048]} 
+                shadow-bias={-0.0001} 
             >
                 <orthographicCamera attach="shadow-camera" args={[-50, 50, -50, 50, 0.1, 100]} />
             </directionalLight>
-            <directionalLight position={[-30, 20, -30]} intensity={0.8} />
+            <directionalLight position={[-30, 20, -30]} intensity={0.5} color={theme?.lighting?.highlight || "#ffffff"} />
             
+            {/* Fog disabled for clarity - 雾效已禁用以提升清晰度 */}
+            {/* {theme?.fog && <fogExp2 attach="fog" args={[theme.fog, 0.008]} />} */}
+
             <Particles />
 
             {/* 世界场景：只在游戏进行时显示 - World only visible during gameplay */}
@@ -128,9 +136,14 @@ const SceneWrapper: React.FC = () => {
                <World />
             </group>
 
-            <EffectComposer disableNormalPass>
-                <Bloom luminanceThreshold={0.7} mipmapBlur intensity={0.4} radius={0.5} />
-                <Vignette eskil={false} offset={0.1} darkness={0.3} />
+            <EffectComposer>
+                <Bloom 
+                    luminanceThreshold={0.99} 
+                    intensity={0.05} 
+                    radius={0.15}
+                    levels={5}
+                />
+                <Vignette eskil={false} offset={0.1} darkness={0.2} />
                 <SMAA />
             </EffectComposer>
         </Canvas>

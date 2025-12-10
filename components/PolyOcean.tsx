@@ -169,9 +169,14 @@ export const PolyOcean: React.FC = () => {
       // 1. 纯空间渐变 - 只基于位置，决定色相
       const diagonalGrad = 1 - ny; // 纵向渐变：后（近）→ 前（远）
       
-      // 对角渐变对比度增强
+      // 对角渐变对比度增强（添加抖动打破层纹）
       let spatialT = diagonalGrad * diagonalGrad * (3 - 2 * diagonalGrad); // Smoothstep
       spatialT = Math.pow(spatialT, 0.6); // 强对比
+      
+      // 添加噪声抖动，打破色带（Dithering）
+      const dither = (Math.sin(x * 1.7 + y * 2.3) * 0.5 + Math.cos(x * 2.1 - y * 1.9) * 0.5) * 0.02;
+      spatialT += dither;
+      
       spatialT = Math.max(0.0, Math.min(1.0, spatialT));
       
       // 2. HSL 空间插值 - 得到该位置的基础颜色
@@ -232,7 +237,7 @@ export const PolyOcean: React.FC = () => {
       <meshStandardMaterial
         vertexColors // 使用顶点颜色
         flatShading  // 平面着色（低多边形风格）
-        roughness={0.8} // 增加粗糙度，减少反光对颜色的干扰
+        roughness={0.4} // 降低粗糙度，减少层纹
         metalness={0.0} // 完全非金属，让顶点颜色更纯粹
         emissive="#000000" // 无自发光
         emissiveIntensity={0}
