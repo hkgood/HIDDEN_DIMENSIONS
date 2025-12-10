@@ -179,19 +179,29 @@ export const PolyOcean: React.FC = () => {
       const baseS = hslDeep.s + (hslSurface.s - hslDeep.s) * spatialT;
       const baseL = hslDeep.l + (hslSurface.l - hslDeep.l) * spatialT;
       
-      // 3. 波浪高度调制 - 只影响饱和度和明度
+      // 3. 波浪高度调制 - 创造高饱和度的波峰效果
       const heightFactorRaw = finalZ / Math.max(heightMult * 2, 0.1);
       const heightFactor = Math.max(-0.5, Math.min(0.5, heightFactorRaw));
       
-      // 波峰：更亮更鲜艳
-      // 波谷：更暗更灰
-      const saturationMod = heightFactor * 0.15; // 饱和度变化 ±15%
-      const lightnessMod = heightFactor * 0.2;   // 明度变化 ±20%
+      // 波峰处理：大幅增加饱和度，轻微降低明度（让颜色更浓郁）
+      // 波谷处理：降低饱和度和明度（更暗更灰）
+      let saturationMod = 0;
+      let lightnessMod = 0;
+      
+      if (heightFactor > 0) {
+        // 波峰：饱和度大幅提升，明度略微降低
+        saturationMod = heightFactor * 0.35;      // 饱和度提升最多 +35%
+        lightnessMod = -heightFactor * 0.1;       // 明度略微降低 -10%（避免发白）
+      } else {
+        // 波谷：饱和度和明度都降低
+        saturationMod = heightFactor * 0.2;       // 饱和度降低最多 -10%
+        lightnessMod = heightFactor * 0.25;       // 明度降低最多 -12.5%
+      }
       
       // 应用调制（色相H保持不变！）
       const finalH = baseH; // 色相完全由位置决定
       const finalS = Math.max(0, Math.min(1, baseS + saturationMod));
-      const finalL = Math.max(0, Math.min(1, baseL + lightnessMod));
+      const finalL = Math.max(0.2, Math.min(0.95, baseL + lightnessMod)); // 限制明度范围避免过暗或过亮
       
       // 4. 转换回 RGB
       const finalColor = new THREE.Color().setHSL(finalH, finalS, finalL);
