@@ -21,25 +21,39 @@ vec3 hueShift(vec3 color, float hue) {
 const useContinuousGradient = (isDecor: boolean, isGoal: boolean) => {
     const activePalette = useGameStore(s => s.activePalette);
     const hueOffset = useGameStore(s => s.hueOffset);
+    const sceneHeightRange = useGameStore(s => s.sceneHeightRange); // 新增：获取动态高度范围
 
-    // 创建稳定的 uniforms 引用（只在 palette 变化时重建）
-    const uniforms = useMemo(() => ({
-        // 三色系统
-        uColorLight: { value: new THREE.Color(activePalette.buildingLight) },
-        uColorMid: { value: new THREE.Color(activePalette.buildingMid) },
-        uColorDark: { value: new THREE.Color(activePalette.buildingDark) },
+    // 创建稳定的 uniforms 引用（只在 palette 或高度范围变化时重建）
+    const uniforms = useMemo(() => {
+        // 检查是否有六面配色系统
+        const hasFaceColors = activePalette.buildingFaceColors !== undefined;
         
-        // 装饰物依然使用天空渐变
-        uColorBottom: { value: new THREE.Color(isDecor ? activePalette.skyBottom : activePalette.buildingDark) }, 
-        uColorTop: { value: new THREE.Color(isDecor ? activePalette.skyTop : activePalette.buildingLight) },   
-        uMinY: { value: -10.0 },
-        uMaxY: { value: 90.0 }, 
-        
-        uGoalColor: { value: new THREE.Color(activePalette.goal) },
-        uIsGoal: { value: isGoal ? 1.0 : 0.0 },
-        uHueOffset: { value: 0 },  // 初始化为 0，稍后动态更新
-        uUseTriColor: { value: isDecor ? 0.0 : 1.0 }
-    }), [activePalette, isDecor, isGoal]);  // 移除 hueOffset 依赖
+        return {
+            // 三色系统（保留兼容）
+            uColorLight: { value: new THREE.Color(activePalette.buildingLight) },
+            uColorMid: { value: new THREE.Color(activePalette.buildingMid) },
+            uColorDark: { value: new THREE.Color(activePalette.buildingDark) },
+            
+            // 六面配色系统（纪念碑谷风格）
+            uColorTop: { value: new THREE.Color(hasFaceColors ? activePalette.buildingFaceColors!.top : activePalette.buildingLight) },
+            uColorBottom: { value: new THREE.Color(hasFaceColors ? activePalette.buildingFaceColors!.bottom : activePalette.buildingDark) },
+            uColorRight: { value: new THREE.Color(hasFaceColors ? activePalette.buildingFaceColors!.right : activePalette.buildingMid) },
+            uColorLeft: { value: new THREE.Color(hasFaceColors ? activePalette.buildingFaceColors!.left : activePalette.buildingMid) },
+            uColorFront: { value: new THREE.Color(hasFaceColors ? activePalette.buildingFaceColors!.front : activePalette.buildingMid) },
+            uColorBack: { value: new THREE.Color(hasFaceColors ? activePalette.buildingFaceColors!.back : activePalette.buildingDark) },
+            
+            // 装饰物依然使用天空渐变
+            uDecorColorBottom: { value: new THREE.Color(isDecor ? activePalette.skyBottom : activePalette.buildingDark) }, 
+            uDecorColorTop: { value: new THREE.Color(isDecor ? activePalette.skyTop : activePalette.buildingLight) },   
+            uMinY: { value: sceneHeightRange.minY }, // 动态高度范围
+            uMaxY: { value: sceneHeightRange.maxY }, // 动态高度范围
+            
+            uGoalColor: { value: new THREE.Color(activePalette.goal) },
+            uIsGoal: { value: isGoal ? 1.0 : 0.0 },
+            uHueOffset: { value: 0 },  // 初始化为 0，稍后动态更新
+            uUseMultiColor: { value: hasFaceColors && !isDecor ? 1.0 : 0.0 }  // 是否启用多色系统
+        };
+    }, [activePalette, isDecor, isGoal, sceneHeightRange]);  // 添加 sceneHeightRange 依赖
 
     // 动态更新 hueOffset（不触发重新编译）
     useEffect(() => {
@@ -49,10 +63,29 @@ const useContinuousGradient = (isDecor: boolean, isGoal: boolean) => {
     }, [hueOffset, uniforms]);
 
     const onBeforeCompile = useMemo(() => (shader: any) => {
-        Object.assign(shader.uniforms, uniforms);
+        // 关键修复：深拷贝 uniform 对象，确保每个 shader 实例都有独立的 uniforms
+        // 避免多个方块共享同一个 uniform 引用导致的全局状态污染
+        shader.uniforms.uColorLight = { value: uniforms.uColorLight.value.clone() };
+        shader.uniforms.uColorMid = { value: uniforms.uColorMid.value.clone() };
+        shader.uniforms.uColorDark = { value: uniforms.uColorDark.value.clone() };
+        shader.uniforms.uColorTop = { value: uniforms.uColorTop.value.clone() };
+        shader.uniforms.uColorBottom = { value: uniforms.uColorBottom.value.clone() };
+        shader.uniforms.uColorRight = { value: uniforms.uColorRight.value.clone() };
+        shader.uniforms.uColorLeft = { value: uniforms.uColorLeft.value.clone() };
+        shader.uniforms.uColorFront = { value: uniforms.uColorFront.value.clone() };
+        shader.uniforms.uColorBack = { value: uniforms.uColorBack.value.clone() };
+        shader.uniforms.uDecorColorBottom = { value: uniforms.uDecorColorBottom.value.clone() };
+        shader.uniforms.uDecorColorTop = { value: uniforms.uDecorColorTop.value.clone() };
+        shader.uniforms.uGoalColor = { value: uniforms.uGoalColor.value.clone() };
+        shader.uniforms.uMinY = { value: uniforms.uMinY.value };
+        shader.uniforms.uMaxY = { value: uniforms.uMaxY.value };
+        shader.uniforms.uIsGoal = { value: uniforms.uIsGoal.value };
+        shader.uniforms.uHueOffset = { value: uniforms.uHueOffset.value };
+        shader.uniforms.uUseMultiColor = { value: uniforms.uUseMultiColor.value };
 
         shader.vertexShader = `
             varying vec3 vWorldPosition;
+            varying vec3 vWorldNormal;
             ${shader.vertexShader}
         `;
 
@@ -61,6 +94,7 @@ const useContinuousGradient = (isDecor: boolean, isGoal: boolean) => {
             `
             #include <worldpos_vertex>
             vWorldPosition = (modelMatrix * vec4(transformed, 1.0)).xyz;
+            vWorldNormal = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
             `
         );
 
@@ -68,17 +102,79 @@ const useContinuousGradient = (isDecor: boolean, isGoal: boolean) => {
             uniform vec3 uColorLight;
             uniform vec3 uColorMid;
             uniform vec3 uColorDark;
-            uniform vec3 uColorBottom;
             uniform vec3 uColorTop;
+            uniform vec3 uColorBottom;
+            uniform vec3 uColorRight;
+            uniform vec3 uColorLeft;
+            uniform vec3 uColorFront;
+            uniform vec3 uColorBack;
+            uniform vec3 uDecorColorBottom;
+            uniform vec3 uDecorColorTop;
             uniform float uMinY;
             uniform float uMaxY;
             uniform float uIsGoal;
             uniform vec3 uGoalColor;
             uniform float uHueOffset;
-            uniform float uUseTriColor;
+            uniform float uUseMultiColor;
             varying vec3 vWorldPosition;
+            varying vec3 vWorldNormal;
             
             ${HUE_SHIFT_GLSL}
+            
+            // RGB 转 HSL
+            vec3 rgb2hsl(vec3 color) {
+                float maxColor = max(max(color.r, color.g), color.b);
+                float minColor = min(min(color.r, color.g), color.b);
+                float delta = maxColor - minColor;
+                
+                float h = 0.0;
+                float s = 0.0;
+                float l = (maxColor + minColor) / 2.0;
+                
+                if (delta > 0.0001) {
+                    s = l < 0.5 ? delta / (maxColor + minColor) : delta / (2.0 - maxColor - minColor);
+                    
+                    if (maxColor == color.r) {
+                        h = (color.g - color.b) / delta + (color.g < color.b ? 6.0 : 0.0);
+                    } else if (maxColor == color.g) {
+                        h = (color.b - color.r) / delta + 2.0;
+                    } else {
+                        h = (color.r - color.g) / delta + 4.0;
+                    }
+                    h /= 6.0;
+                }
+                
+                return vec3(h, s, l);
+            }
+            
+            // HSL 转 RGB
+            float hue2rgb(float p, float q, float t) {
+                if (t < 0.0) t += 1.0;
+                if (t > 1.0) t -= 1.0;
+                if (t < 1.0/6.0) return p + (q - p) * 6.0 * t;
+                if (t < 1.0/2.0) return q;
+                if (t < 2.0/3.0) return p + (q - p) * (2.0/3.0 - t) * 6.0;
+                return p;
+            }
+            
+            vec3 hsl2rgb(vec3 hsl) {
+                float h = hsl.x;
+                float s = hsl.y;
+                float l = hsl.z;
+                
+                if (s == 0.0) {
+                    return vec3(l);
+                }
+                
+                float q = l < 0.5 ? l * (1.0 + s) : l + s - l * s;
+                float p = 2.0 * l - q;
+                
+                float r = hue2rgb(p, q, h + 1.0/3.0);
+                float g = hue2rgb(p, q, h);
+                float b = hue2rgb(p, q, h - 1.0/3.0);
+                
+                return vec3(r, g, b);
+            }
             
             vec3 adjustSaturation(vec3 color, float adjustment) {
                 const vec3 W = vec3(0.2125, 0.7154, 0.0721);
@@ -96,50 +192,94 @@ const useContinuousGradient = (isDecor: boolean, isGoal: boolean) => {
             
             vec3 finalColor;
             
-            if (uUseTriColor > 0.5) {
-                // === Monument Valley 三色着色法（改进版：平滑过渡）===
-                // 光源方向：右上前方（模拟经典45度光照）
-                vec3 lightDir = normalize(vec3(0.5, 1.0, 0.3));
+            if (uUseMultiColor > 0.5) {
+                // === 纪念碑谷风格：方块间连续渐变 ===
                 
-                // 计算法线与光源的夹角
-                float NdotL = dot(normalize(vNormal), lightDir);
+                // 步骤1：硬边判断 - 根据法线确定面的基础颜色
+                vec3 n = normalize(vWorldNormal);
+                vec3 absN = abs(n);
                 
-                // 使用 smoothstep 实现平滑的三色过渡（消除层纹）
-                float lightWeight = smoothstep(0.2, 0.5, NdotL);      // 亮色权重
-                float darkWeight = smoothstep(-0.1, -0.4, NdotL);     // 暗色权重
+                vec3 baseFaceColor;
                 
-                // 三色混合：暗 -> 中 -> 亮
-                vec3 baseColor = mix(
-                    mix(uColorDark, uColorMid, 1.0 - darkWeight),  // 暗到中
-                    uColorLight,                                     // 中到亮
-                    lightWeight
-                );
-                
-                // Apply Hue Shift (if needed)
-                baseColor = hueShift(baseColor, uHueOffset);
-                
-                // 轻微饱和度提升（保持色彩纯净）
-                baseColor = adjustSaturation(baseColor, 0.15);
-                
-                // 激进防过曝：强制将颜色限制在安全范围
-                // 1. 限制最大RGB分量
-                float maxComponent = max(max(baseColor.r, baseColor.g), baseColor.b);
-                if (maxComponent > 0.85) {
-                    baseColor *= (0.85 / maxComponent);  // 从 0.95 降至 0.85
+                if (absN.y > absN.x && absN.y > absN.z) {
+                    // Y轴主导：顶面或底面
+                    if (n.y > 0.0) {
+                        baseFaceColor = uColorTop;      // 顶面
+                    } else {
+                        baseFaceColor = uColorBottom;   // 底面
+                    }
+                } else if (absN.x > absN.z) {
+                    // X轴主导：左面或右面
+                    if (n.x > 0.0) {
+                        baseFaceColor = uColorRight;    // 右面
+                    } else {
+                        baseFaceColor = uColorLeft;     // 左面
+                    }
+                } else {
+                    // Z轴主导：前面或后面
+                    if (n.z > 0.0) {
+                        baseFaceColor = uColorFront;    // 前面
+                    } else {
+                        baseFaceColor = uColorBack;     // 后面
+                    }
                 }
                 
-                // 2. 进一步降低整体亮度（Tone Down）
-                baseColor *= 0.92;  // 全局降低 8%
+                // 步骤2：基于方块的全局高度位置，统一调整整个方块的色调
+                // 关键：使用 vWorldPosition.y（当前片元的世界Y坐标）
+                // 这样相邻方块之间会形成连续渐变
                 
-                finalColor = mix(baseColor, uGoalColor, uIsGoal * 0.9);
+                float yRange = uMaxY - uMinY;
+                float heightFactor = (vWorldPosition.y - uMinY) / yRange;
+                heightFactor = clamp(heightFactor, 0.0, 1.0);
+                
+                // 平滑曲线
+                heightFactor = smoothstep(0.0, 1.0, heightFactor);
+                
+                // 转换到 HSL 色彩空间进行调整
+                vec3 hsl = rgb2hsl(baseFaceColor);
+                
+                // 色相偏移：高处偏暖（+20度），低处偏冷（-20度）
+                const float HUE_SHIFT_AMOUNT = 0.056; // 约20度
+                float hueShift = (heightFactor - 0.5) * HUE_SHIFT_AMOUNT;
+                hsl.x = fract(hsl.x + hueShift);
+                
+                // 饱和度调整：高处略降（更柔和），低处略升（更浓郁）
+                const float SAT_VARIATION = 0.20;
+                hsl.y = clamp(hsl.y + (0.5 - heightFactor) * SAT_VARIATION, 0.1, 1.0);
+                
+                // 明度调整：高处明亮，低处深沉（更大范围：40%-160%）
+                const float BASE_BRIGHTNESS = 0.40;
+                const float GRADIENT_INTENSITY = 1.20;
+                float brightnessMult = BASE_BRIGHTNESS + heightFactor * GRADIENT_INTENSITY;
+                hsl.z = clamp(hsl.z * brightnessMult, 0.05, 0.95);
+                
+                // 转换回 RGB
+                vec3 gradientColor = hsl2rgb(hsl);
+                
+                // 轻微饱和度提升
+                gradientColor = adjustSaturation(gradientColor, 0.10);
+                
+                // 最终防护
+                gradientColor = clamp(gradientColor, 0.0, 1.0);
+                
+                // 目标方块混合
+                finalColor = mix(gradientColor, uGoalColor, uIsGoal * 0.9);
+                
             } else {
-                // === 装饰物保留原有渐变 ===
+                // === 装饰物：同样应用全局高度渐变 ===
                 float t = smoothstep(uMinY, uMaxY, vWorldPosition.y);
-                vec3 gradientColor = mix(uColorBottom, uColorTop, t);
-                gradientColor = hueShift(gradientColor, uHueOffset);
-                gradientColor = adjustSaturation(gradientColor, 0.5);
+                vec3 gradientColor = mix(uDecorColorBottom, uDecorColorTop, t);
+                
+                if (abs(uHueOffset) > 0.001) {
+                    gradientColor = hueShift(gradientColor, uHueOffset);
+                }
+                
+                gradientColor = adjustSaturation(gradientColor, 0.3);
                 finalColor = mix(gradientColor, uGoalColor, uIsGoal * 0.9);
             }
+            
+            // 最终防过曝
+            finalColor = clamp(finalColor, 0.0, 0.98);
             
             diffuseColor.rgb = finalColor;
             `
@@ -149,11 +289,14 @@ const useContinuousGradient = (isDecor: boolean, isGoal: boolean) => {
             '#include <emissivemap_fragment>',
             `
             #include <emissivemap_fragment>
-            // 赋值而不是累加，避免逐帧累积
+            
+            // 关键修复：完全覆盖 totalEmissiveRadiance，不依赖任何之前的值
+            // 这避免了 GPU 缓存、Three.js 内部状态或帧缓冲残留导致的累积效应
             if (uIsGoal > 0.5) {
-                totalEmissiveRadiance = diffuseColor.rgb * 0.8;  // 目标点有明显发光
+                totalEmissiveRadiance = diffuseColor.rgb * 0.8;  // 目标点有自发光
+            } else {
+                totalEmissiveRadiance = vec3(0.0);  // 普通方块强制清零
             }
-            // 普通方块无自发光（totalEmissiveRadiance 保持为 0）
             `
         );
     }, [uniforms]);
@@ -163,63 +306,135 @@ const useContinuousGradient = (isDecor: boolean, isGoal: boolean) => {
 
 export const LevelGeometry: React.FC<GeometryProps> = ({ type, isGoal }) => {
   const isDecor = type === BlockType.PILLAR || type === BlockType.DECOR || type === BlockType.SPIRE || type === BlockType.WALL || type === BlockType.ROOF;
-  const { onBeforeCompile } = useContinuousGradient(isDecor, !!isGoal);
-
+  const activePalette = useGameStore(s => s.activePalette);
+  
+  // 使用渐变 shader 代替单色
+  const gradientShader = useContinuousGradient(isDecor, isGoal || false);
+  
+  // Fallback 颜色（如果 shader 未应用）
+  const blockColor = isDecor ? activePalette.buildingMid : activePalette.buildingLight;
+  const goalColor = activePalette.goal;
+  
+  // 创建非索引几何体（启用 Flat Shading 的关键）
+  // 注意：只为 CUBE 和主要方块类型创建，装饰元素保持原样
+  const createNonIndexedGeometry = useMemo(() => {
+    if (type === BlockType.CUBE || type === BlockType.FLOOR || type === BlockType.WALL || type === BlockType.STAIR) {
+      const geo = new THREE.BoxGeometry(1.01, 1.01, 1.01);
+      // 转换为非索引几何体：每个面有独立的顶点和法线
+      const nonIndexedGeo = geo.toNonIndexed();
+      return nonIndexedGeo;
+    }
+    return null;
+  }, [type]);
+  
   // Define geometries for architectural elements
   return (
     <group>
-        {/* Standard Walkable Block or Foundation */}
+        {/* Standard Walkable Block or Foundation - 纪念碑谷风格：硬边+面内渐变！ */}
         {(type === BlockType.CUBE || type === BlockType.DECOR || type === BlockType.WALL || type === BlockType.FLOOR) && (
              <mesh castShadow receiveShadow>
-                <boxGeometry args={[1.01, 1.01, 1.01]} />
+                {createNonIndexedGeometry ? (
+                  <primitive object={createNonIndexedGeometry} attach="geometry" />
+                ) : (
+                  <boxGeometry args={[1.01, 1.01, 1.01]} />
+                )}
                 <meshStandardMaterial 
-                   roughness={0.3} 
-                   metalness={0.05}
-                   onBeforeCompile={onBeforeCompile}
+                   color={isGoal ? goalColor : blockColor}
+                   roughness={0.7} 
+                   metalness={0.1}
                    toneMapped={true}
+                   flatShading={false}
+                   emissive={isGoal ? goalColor : "#000000"}
+                   emissiveIntensity={isGoal ? 0.3 : 0}
+                   onBeforeCompile={gradientShader.onBeforeCompile}
                 />
              </mesh>
         )}
         
-        {/* Stairs */}
+        {/* Stairs - 纪念碑谷风格：硬边+面内渐变！ */}
         {type === BlockType.STAIR && (
              <mesh castShadow receiveShadow>
-                 {/* Visual ramp but logical block */}
-                 <boxGeometry args={[1.01, 1.01, 1.01]} /> 
-                 {/* Ideally this would be a ramp geometry, keeping box for simplicity of seamless shader */}
-                 <meshStandardMaterial roughness={0.3} onBeforeCompile={onBeforeCompile} toneMapped={true}/>
+                 {createNonIndexedGeometry ? (
+                   <primitive object={createNonIndexedGeometry} attach="geometry" />
+                 ) : (
+                   <boxGeometry args={[1.01, 1.01, 1.01]} />
+                 )}
+                 <meshStandardMaterial 
+                    color={isGoal ? goalColor : blockColor}
+                    roughness={0.7} 
+                    metalness={0.1}
+                    toneMapped={true}
+                    flatShading={false}
+                    emissive={isGoal ? goalColor : "#000000"}
+                    emissiveIntensity={isGoal ? 0.3 : 0}
+                    onBeforeCompile={gradientShader.onBeforeCompile}
+                 />
              </mesh>
         )}
 
-        {/* Decorative Arch */}
+        {/* Decorative Arch - 应用渐变 */}
         {type === BlockType.ARCH && (
             <group>
                 <mesh castShadow receiveShadow>
                      <boxGeometry args={[1.01, 1.01, 0.4]} />
-                     <meshStandardMaterial roughness={0.3} onBeforeCompile={onBeforeCompile} toneMapped={true}/>
+                     <meshStandardMaterial 
+                       color={blockColor} 
+                       roughness={0.7} 
+                       metalness={0.1} 
+                       toneMapped={true}
+                       flatShading={false}
+                       onBeforeCompile={gradientShader.onBeforeCompile}
+                     />
                 </mesh>
                 <mesh position={[0, 0, 0]} castShadow receiveShadow>
                     <torusGeometry args={[0.35, 0.15, 8, 16, Math.PI]} />
-                    <meshStandardMaterial roughness={0.3} onBeforeCompile={onBeforeCompile} toneMapped={true}/>
+                    <meshStandardMaterial 
+                      color={blockColor} 
+                      roughness={0.7} 
+                      metalness={0.1} 
+                      toneMapped={true}
+                      flatShading={false}
+                      onBeforeCompile={gradientShader.onBeforeCompile}
+                    />
                 </mesh>
             </group>
         )}
         
-        {/* Classical Pillar */}
+        {/* Classical Pillar - 应用渐变 */}
         {type === BlockType.PILLAR && (
             <group>
                 <mesh castShadow receiveShadow>
                     <cylinderGeometry args={[0.3, 0.3, 1.01, 16]} />
-                    <meshStandardMaterial roughness={0.3} onBeforeCompile={onBeforeCompile} toneMapped={true}/>
+                    <meshStandardMaterial 
+                      color={blockColor} 
+                      roughness={0.7} 
+                      metalness={0.1} 
+                      toneMapped={true}
+                      flatShading={false}
+                      onBeforeCompile={gradientShader.onBeforeCompile}
+                    />
                 </mesh>
-                {/* Capital/Base */}
                 <mesh position={[0, 0.45, 0]} castShadow receiveShadow>
                     <cylinderGeometry args={[0.4, 0.35, 0.1, 8]} />
-                    <meshStandardMaterial roughness={0.3} onBeforeCompile={onBeforeCompile} toneMapped={true}/>
+                    <meshStandardMaterial 
+                      color={blockColor} 
+                      roughness={0.7} 
+                      metalness={0.1} 
+                      toneMapped={true}
+                      flatShading={false}
+                      onBeforeCompile={gradientShader.onBeforeCompile}
+                    />
                 </mesh>
                  <mesh position={[0, -0.45, 0]} castShadow receiveShadow>
                     <cylinderGeometry args={[0.35, 0.4, 0.1, 8]} />
-                    <meshStandardMaterial roughness={0.3} onBeforeCompile={onBeforeCompile} toneMapped={true}/>
+                    <meshStandardMaterial 
+                      color={blockColor} 
+                      roughness={0.7} 
+                      metalness={0.1} 
+                      toneMapped={true}
+                      flatShading={false}
+                      onBeforeCompile={gradientShader.onBeforeCompile}
+                    />
                 </mesh>
             </group>
         )}
@@ -228,7 +443,7 @@ export const LevelGeometry: React.FC<GeometryProps> = ({ type, isGoal }) => {
         {type === BlockType.ROOF && (
              <mesh castShadow receiveShadow>
                  <coneGeometry args={[0.72, 1.0, 4]} /> 
-                 <meshStandardMaterial roughness={0.3} onBeforeCompile={onBeforeCompile} toneMapped={true}/>
+                 <meshStandardMaterial color={blockColor} roughness={0.7} metalness={0.1} toneMapped={true}/>
              </mesh>
         )}
         
@@ -236,7 +451,7 @@ export const LevelGeometry: React.FC<GeometryProps> = ({ type, isGoal }) => {
         {type === BlockType.SLAB && (
              <mesh castShadow receiveShadow position={[0, -0.25, 0]}>
                  <boxGeometry args={[1.01, 0.5, 1.01]} />
-                 <meshStandardMaterial roughness={0.3} onBeforeCompile={onBeforeCompile} toneMapped={true}/>
+                 <meshStandardMaterial color={blockColor} roughness={0.7} metalness={0.1} toneMapped={true}/>
              </mesh>
         )}
 
@@ -246,17 +461,17 @@ export const LevelGeometry: React.FC<GeometryProps> = ({ type, isGoal }) => {
                 {/* Top part */}
                 <mesh position={[0, 0.35, 0]} castShadow receiveShadow>
                      <boxGeometry args={[1.01, 0.3, 1.01]} />
-                     <meshStandardMaterial roughness={0.3} onBeforeCompile={onBeforeCompile} toneMapped={true}/>
+                     <meshStandardMaterial color={blockColor} roughness={0.7} metalness={0.1} toneMapped={true}/>
                 </mesh>
                 {/* Bottom part */}
                 <mesh position={[0, -0.35, 0]} castShadow receiveShadow>
                      <boxGeometry args={[1.01, 0.3, 1.01]} />
-                     <meshStandardMaterial roughness={0.3} onBeforeCompile={onBeforeCompile} toneMapped={true}/>
+                     <meshStandardMaterial color={blockColor} roughness={0.7} metalness={0.1} toneMapped={true}/>
                 </mesh>
                 {/* Back wall (at -X) */}
                 <mesh position={[-0.35, 0, 0]} castShadow receiveShadow>
                      <boxGeometry args={[0.3, 0.4, 1.01]} />
-                     <meshStandardMaterial roughness={0.3} onBeforeCompile={onBeforeCompile} toneMapped={true}/>
+                     <meshStandardMaterial color={blockColor} roughness={0.7} metalness={0.1} toneMapped={true}/>
                 </mesh>
              </group>
         )}
@@ -267,7 +482,7 @@ export const LevelGeometry: React.FC<GeometryProps> = ({ type, isGoal }) => {
                 {/* Base Block */}
                 <mesh castShadow receiveShadow>
                     <boxGeometry args={[1.01, 1.01, 1.01]} />
-                    <meshStandardMaterial roughness={0.3} onBeforeCompile={onBeforeCompile} toneMapped={true}/>
+                    <meshStandardMaterial color={blockColor} roughness={0.7} metalness={0.1} toneMapped={true}/>
                 </mesh>
                 {/* Protrusion (pointing +X) */}
                 <mesh position={[0.6, 0, 0]} castShadow receiveShadow>
@@ -283,32 +498,32 @@ export const LevelGeometry: React.FC<GeometryProps> = ({ type, isGoal }) => {
                 {/* Frame Top - Walkable */}
                 <mesh position={[0, 0.45, 0]} castShadow receiveShadow>
                     <boxGeometry args={[1.01, 0.1, 1.01]} />
-                    <meshStandardMaterial roughness={0.3} onBeforeCompile={onBeforeCompile} toneMapped={true}/>
+                    <meshStandardMaterial color={blockColor} roughness={0.7} metalness={0.1} toneMapped={true}/>
                 </mesh>
                 {/* Frame Bottom - Walkable */}
                 <mesh position={[0, -0.45, 0]} castShadow receiveShadow>
                     <boxGeometry args={[1.01, 0.1, 1.01]} />
-                    <meshStandardMaterial roughness={0.3} onBeforeCompile={onBeforeCompile} toneMapped={true}/>
+                    <meshStandardMaterial color={blockColor} roughness={0.7} metalness={0.1} toneMapped={true}/>
                 </mesh>
                 {/* Frame Left */}
                 <mesh position={[-0.45, 0, 0]} castShadow receiveShadow>
                     <boxGeometry args={[0.1, 1.01, 1.01]} />
-                    <meshStandardMaterial roughness={0.3} onBeforeCompile={onBeforeCompile} toneMapped={true}/>
+                    <meshStandardMaterial color={blockColor} roughness={0.7} metalness={0.1} toneMapped={true}/>
                 </mesh>
                 {/* Frame Right */}
                 <mesh position={[0.45, 0, 0]} castShadow receiveShadow>
                     <boxGeometry args={[0.1, 1.01, 1.01]} />
-                    <meshStandardMaterial roughness={0.3} onBeforeCompile={onBeforeCompile} toneMapped={true}/>
+                    <meshStandardMaterial color={blockColor} roughness={0.7} metalness={0.1} toneMapped={true}/>
                 </mesh>
                 {/* Grid Pattern */}
                 <group scale={[0.8, 0.8, 1]}>
                     <mesh rotation={[0,0,Math.PI/4]} castShadow receiveShadow>
                         <boxGeometry args={[1.2, 0.05, 0.2]} />
-                        <meshStandardMaterial roughness={0.3} onBeforeCompile={onBeforeCompile} toneMapped={true}/>
+                        <meshStandardMaterial color={blockColor} roughness={0.7} metalness={0.1} toneMapped={true}/>
                     </mesh>
                     <mesh rotation={[0,0,-Math.PI/4]} castShadow receiveShadow>
                         <boxGeometry args={[1.2, 0.05, 0.2]} />
-                        <meshStandardMaterial roughness={0.3} onBeforeCompile={onBeforeCompile} toneMapped={true}/>
+                        <meshStandardMaterial color={blockColor} roughness={0.7} metalness={0.1} toneMapped={true}/>
                     </mesh>
                 </group>
             </group>
@@ -320,12 +535,12 @@ export const LevelGeometry: React.FC<GeometryProps> = ({ type, isGoal }) => {
                  {/* Main Roof Body */}
                  <mesh castShadow receiveShadow position={[0, 0.2, 0]}>
                      <coneGeometry args={[0.8, 0.6, 4]} /> 
-                     <meshStandardMaterial roughness={0.3} onBeforeCompile={onBeforeCompile} toneMapped={true}/>
+                     <meshStandardMaterial color={blockColor} roughness={0.7} metalness={0.1} toneMapped={true}/>
                  </mesh>
                  {/* Eaves (Curved look via flattened wider cone) */}
                  <mesh castShadow receiveShadow position={[0, -0.1, 0]}>
                      <coneGeometry args={[1.0, 0.3, 4]} />
-                     <meshStandardMaterial roughness={0.3} onBeforeCompile={onBeforeCompile} toneMapped={true}/>
+                     <meshStandardMaterial color={blockColor} roughness={0.7} metalness={0.1} toneMapped={true}/>
                  </mesh>
                  {/* Top Finial */}
                  <mesh castShadow receiveShadow position={[0, 0.6, 0]}>
@@ -340,7 +555,7 @@ export const LevelGeometry: React.FC<GeometryProps> = ({ type, isGoal }) => {
              <group>
                  <mesh position={[0, 0, 0]} castShadow receiveShadow>
                      <cylinderGeometry args={[0.45, 0.45, 0.6, 16]} />
-                     <meshStandardMaterial roughness={0.3} onBeforeCompile={onBeforeCompile} toneMapped={true}/>
+                     <meshStandardMaterial color={blockColor} roughness={0.7} metalness={0.1} toneMapped={true}/>
                  </mesh>
                  <mesh position={[0, 0.5, 0]} castShadow receiveShadow>
                      <sphereGeometry args={[0.45, 16, 16, 0, Math.PI * 2, 0, Math.PI/2]} />

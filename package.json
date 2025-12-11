@@ -1,5 +1,5 @@
 {
-  "name": "ethereal-perspectives",
+  "name": "hidden-dimensions",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,22 +9,24 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react-dom": "^19.2.1",
-    "react": "^19.2.1",
-    "zustand": "^5.0.9",
-    "@react-three/fiber": "^9.4.2",
-    "three": "^0.181.2",
-    "@react-three/drei": "^10.7.7",
-    "@react-three/postprocessing": "^3.0.4",
-    "postprocessing": "^6.36.6",
-    "tone": "^15.1.22",
-    "maath": "^0.10.8",
     "@react-spring/three": "^10.0.3",
-    "@use-gesture/react": "^10.3.1"
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.4.2",
+    "@react-three/postprocessing": "^3.0.4",
+    "@use-gesture/react": "^10.3.1",
+    "maath": "^0.10.8",
+    "postprocessing": "^6.36.6",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
+    "three": "^0.181.2",
+    "tone": "^15.1.22",
+    "zustand": "^5.0.9"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "autoprefixer": "^10.4.22",
+    "tailwindcss": "^3.4.19",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }

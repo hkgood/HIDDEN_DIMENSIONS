@@ -29,6 +29,15 @@ export interface BuildingColorSet {
   light: string;  // 受光面（亮色）
   mid: string;    // 侧面（中间色）
   dark: string;   // 背光面（暗色）
+  // 新增：纪念碑谷风格的六面配色
+  faceColors?: {
+    top: string;     // 顶面（+Y）
+    bottom: string;  // 底面（-Y）
+    right: string;   // 右侧面（+X）
+    left: string;    // 左侧面（-X）
+    front: string;   // 前面（+Z）
+    back: string;    // 后面（-Z）
+  };
 }
 
 export interface BackgroundColors {
@@ -97,7 +106,15 @@ export const warmCoralTheme: ColorPalette = {
   buildingColors: {
     light: '#FFB199',  // 淡桃色 - 受光面
     mid: '#FF9F80',    // 桃橙色 - 侧面
-    dark: '#C06C84'    // 玫瑰紫红 - 背光面
+    dark: '#C06C84',   // 玫瑰紫红 - 背光面
+    faceColors: {
+      top: '#FFB199',     // 顶面：淡桃色（最亮）
+      right: '#FF9F80',   // 右侧：桃橙色
+      left: '#FFA07A',    // 左侧：浅珊瑚
+      front: '#B19CD9',   // 前面：薰衣草紫
+      back: '#9D84B7',    // 后面：中紫
+      bottom: '#C06C84'   // 底面：玫瑰紫红（最暗）
+    }
   },
   
   lighting: {
@@ -130,8 +147,8 @@ export const deepOceanTheme: ColorPalette = {
   description: '深蓝与青绿的海洋系，营造神秘深邃氛围',
   
   background: {
-    sky: ['#1A2332', '#2C3E50', '#34495E'], // 深蓝渐变
-    horizon: '#457B9D',
+    sky: ['#00A8E8', '#00C9FF', '#66E0FF'], // 改为鲜艳的天蓝色渐变（高饱和高亮度）
+    horizon: '#7FE5FF',
     ground: '#264653'
   },
   
@@ -159,7 +176,15 @@ export const deepOceanTheme: ColorPalette = {
   buildingColors: {
     light: '#7FD8CC',  // 薄荷青 - 受光面
     mid: '#4ECDC4',    // 青绿 - 侧面
-    dark: '#2C5F5D'    // 深青 - 背光面
+    dark: '#2C5F5D',   // 深青 - 背光面
+    faceColors: {
+      top: '#A8DADC',     // 顶面：冰蓝（最亮）
+      right: '#7FD8CC',   // 右侧：薄荷青
+      left: '#6BCABA',    // 左侧：浅青绿
+      front: '#4ECDC4',   // 前面：青绿
+      back: '#3A5A6B',    // 后面：深青
+      bottom: '#2C5F5D'   // 底面：深青（最暗）
+    }
   },
   
   lighting: {
@@ -221,7 +246,15 @@ export const purpleTwilightTheme: ColorPalette = {
   buildingColors: {
     light: '#E8B4C8',  // 粉紫 - 受光面
     mid: '#9B89B3',    // 薰衣草紫 - 侧面
-    dark: '#6C5B7B'    // 深紫灰 - 背光面
+    dark: '#6C5B7B',   // 深紫灰 - 背光面
+    faceColors: {
+      top: '#E8B4C8',     // 顶面：粉紫（最亮）
+      right: '#C06C84',   // 右侧：玫瑰紫红
+      left: '#9B89B3',    // 左侧：薰衣草紫
+      front: '#8B7BA8',   // 前面：中紫
+      back: '#A89CC8',    // 后面：淡紫
+      bottom: '#6C5B7B'   // 底面：深紫灰（最暗）
+    }
   },
   
   lighting: {
@@ -254,8 +287,8 @@ export const emeraldForestTheme: ColorPalette = {
   description: '深绿与荧光绿的森林系，充满生命力',
   
   background: {
-    sky: ['#1E3A2C', '#2D4739', '#3C5A47'], // 深绿渐变
-    horizon: '#4A6B5A',
+    sky: ['#00D084', '#00E896', '#66FFB8'], // 改为鲜艳的翠绿色渐变（高饱和高亮度）
+    horizon: '#7FFFC8',
     ground: '#2D4739'
   },
   
@@ -283,7 +316,15 @@ export const emeraldForestTheme: ColorPalette = {
   buildingColors: {
     light: '#7FA08F',  // 淡绿 - 受光面
     mid: '#4A6B5A',    // 青绿 - 侧面
-    dark: '#2D4739'    // 深森林绿 - 背光面
+    dark: '#2D4739',   // 深森林绿 - 背光面
+    faceColors: {
+      top: '#A0C4AB',     // 顶面：极淡绿（最亮）
+      right: '#8FB29A',   // 右侧：薄荷灰绿
+      left: '#7FA08F',    // 左侧：淡绿
+      front: '#6B8E7D',   // 前面：灰绿
+      back: '#4A6B5A',    // 后面：青绿
+      bottom: '#2D4739'   // 底面：深森林绿（最暗）
+    }
   },
   
   lighting: {
@@ -345,7 +386,15 @@ export const desertRuinsTheme: ColorPalette = {
   buildingColors: {
     light: '#E0B589',  // 浅沙色 - 受光面
     mid: '#D4A574',    // 沙棕色 - 侧面
-    dark: '#B89968'    // 深沙色 - 背光面
+    dark: '#B89968',   // 深沙色 - 背光面
+    faceColors: {
+      top: '#F4E7D7',     // 顶面：极淡沙色（最亮）
+      right: '#E0B589',   // 右侧：浅沙色
+      left: '#D4A574',    // 左侧：沙棕色
+      front: '#7FCDCD',   // 前面：绿松石（对比色）
+      back: '#C9A676',    // 后面：古铜色
+      bottom: '#B89968'   // 底面：深沙色（最暗）
+    }
   },
   
   lighting: {
@@ -378,8 +427,8 @@ export const darkVoidTheme: ColorPalette = {
   description: '黑色背景与霓虹发光的虚空系，危险而迷人',
   
   background: {
-    sky: ['#000000', '#0A0A0A', '#1A1A1A'], // 纯黑到深灰
-    horizon: '#1F1F1F',
+    sky: ['#FF10F0', '#FF6EC7', '#FF9EE0'], // 改为霓虹粉紫渐变（高饱和高亮度）
+    horizon: '#FFBEF0',
     ground: '#0F0F0F'
   },
   
@@ -407,7 +456,15 @@ export const darkVoidTheme: ColorPalette = {
   buildingColors: {
     light: '#5A5A5A',  // 中性灰 - 受光面
     mid: '#3A3A3A',    // 中灰 - 侧面
-    dark: '#1A1A1A'    // 极深灰 - 背光面
+    dark: '#1A1A1A',   // 极深灰 - 背光面
+    faceColors: {
+      top: '#7A7A7A',     // 顶面：浅灰（最亮）
+      right: '#FF6EC7',   // 右侧：霓虹粉（发光色）
+      left: '#5A5A5A',    // 左侧：中性灰
+      front: '#9FE870',   // 前面：荧光绿（发光色）
+      back: '#3A3A3A',    // 后面：中灰
+      bottom: '#1A1A1A'   // 底面：极深灰（最暗）
+    }
   },
   
   lighting: {
@@ -469,7 +526,15 @@ export const cherryBlossomTheme: ColorPalette = {
   buildingColors: {
     light: '#FFDCE5',  // 极淡粉 - 受光面
     mid: '#FFC9D0',    // 浅樱花粉 - 侧面
-    dark: '#D87093'    // 古粉红 - 背光面
+    dark: '#D87093',   // 古粉红 - 背光面
+    faceColors: {
+      top: '#FFE4E9',     // 顶面：白粉（最亮）
+      right: '#FFDCE5',   // 右侧：极淡粉
+      left: '#FFC9D0',    // 左侧：浅樱花粉
+      front: '#B4E7CE',   // 前面：薄荷绿（对比色）
+      back: '#FFB6C1',    // 后面：樱花粉
+      bottom: '#D87093'   // 底面：古粉红（最暗）
+    }
   },
   
   lighting: {
@@ -531,7 +596,15 @@ export const infernoTheme: ColorPalette = {
   buildingColors: {
     light: '#CD5C5C',  // 印度红 - 受光面
     mid: '#B22222',    // 火砖红 - 侧面
-    dark: '#8B0000'    // 深红 - 背光面
+    dark: '#8B0000',   // 深红 - 背光面
+    faceColors: {
+      top: '#FF6B00',     // 顶面：橙红（岩浆色）
+      right: '#CD5C5C',   // 右侧：印度红
+      left: '#FFAA00',    // 左侧：橙黄（火焰）
+      front: '#B22222',   // 前面：火砖红
+      back: '#A52A2A',    // 后面：褐红
+      bottom: '#8B0000'   // 底面：深红（最暗）
+    }
   },
   
   lighting: {

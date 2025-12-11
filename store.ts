@@ -837,6 +837,26 @@ export const useGameStore = create<GameState>((set, get) => ({
 
       const newLevel = WorldGenerator.getResult();
       
+      // === 动态计算场景高度范围 ===
+      let minYHeight = Infinity;
+      let maxYHeight = -Infinity;
+      
+      newLevel.nodes.forEach(node => {
+          const y = node.localPos[1];
+          if (y < minYHeight) minYHeight = y;
+          if (y > maxYHeight) maxYHeight = y;
+      });
+      
+      // 添加一些缓冲空间（10%），确保渐变覆盖完整范围
+      const range = maxYHeight - minYHeight;
+      const buffer = Math.max(range * 0.1, 2); // 至少2个单位缓冲
+      minYHeight = minYHeight - buffer;
+      maxYHeight = maxYHeight + buffer;
+      
+      const sceneHeightRange = { minY: minYHeight, maxY: maxYHeight };
+      
+      console.log(`🎨 Scene Height Range: ${minYHeight.toFixed(1)} to ${maxYHeight.toFixed(1)} (range: ${(maxYHeight - minYHeight).toFixed(1)})`);
+      
       // 2. Pick Palette & Shift
       let selectedTheme = getRandomTheme();
       
@@ -890,7 +910,8 @@ export const useGameStore = create<GameState>((set, get) => ({
           theme: selectedTheme,
           hueOffset: hue,
           archetype: pick,
-          status: GameStatus.PLAYING
+          status: GameStatus.PLAYING,
+          sceneHeightRange // 添加场景高度范围
       });
   },
 

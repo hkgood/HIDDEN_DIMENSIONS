@@ -1,4 +1,4 @@
-# 🌌 Ethereal Perspectives / Hidden Dimensions
+# 🌌 HIDDEN DIMENSIONS
 
 > **"What you see is where you can walk."**  
 > **"所见即所得，所见即可达。"**
@@ -10,14 +10,14 @@
 <a name="english"></a>
 ## 🇬🇧 English
 
-**Ethereal Perspectives** is a web-based architectural puzzle game inspired by the impossible geometry of *Monument Valley*. It is not just a clone; it is a technical exploration into **Orthographic Pathfinding**, **Procedural Aesthetics**, and **Generative Audio**.
+**HIDDEN DIMENSIONS** is a web-based architectural puzzle game inspired by the impossible geometry of *Monument Valley*. It is not just a clone; it is a technical exploration into **Orthographic Pathfinding**, **Procedural Aesthetics**, and **Generative Audio**.
 
 Built with **React**, **Three.js (R3F)**, and **Math**.
 
 ### 🎮 The Core Logic: "The Escher Align"
 
 In a standard 3D game, if Block A is at `x:0` and Block B is at `x:10`, you cannot walk between them.
-In **Ethereal Perspectives**, physics is optional. 
+In **HIDDEN DIMENSIONS**, physics is optional. 
 
 The game engine creates a graph of walkable nodes based on **Screen Space Alignment**:
 1.  The world is rendered using an **Orthographic Camera** (no perspective distortion).
@@ -56,12 +56,12 @@ npm start
 <a name="chinese"></a>
 ## 🇨🇳 中文
 
-**Ethereal Perspectives (隐匿维度)** 是一款受《纪念碑谷》启发的网页端视错觉解谜游戏。它不仅是对经典玩法的致敬，更是一次关于 **正交寻路算法**、**程序化美学** 和 **生成式音频** 的技术探索。
+**HIDDEN DIMENSIONS (维隐)** 是一款受《纪念碑谷》启发的网页端视错觉解谜游戏。它不仅是对经典玩法的致敬，更是一次关于 **正交寻路算法**、**程序化美学** 和 **生成式音频** 的技术探索。
 
 ### 🎮 核心逻辑："埃舍尔对齐"
 
 在普通的 3D 游戏中，如果方块 A 在 `x:0`，方块 B 在 `x:10`，你是无法跨越中间的鸿沟的。
-但在 **Ethereal Perspectives** 中，物理法则服从于视觉法则。
+但在 **HIDDEN DIMENSIONS** 中，物理法则服从于视觉法则。
 
 游戏引擎基于 **屏幕空间对齐 (Screen Space Alignment)** 构建寻路图：
 1.  世界通过 **正交相机 (Orthographic Camera)** 渲染，消除了透视变形。

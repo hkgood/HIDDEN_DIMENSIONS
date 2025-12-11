@@ -81,14 +81,28 @@ const CameraRig: React.FC = () => {
 
     } else if (status === GameStatus.PLAYING) {
        // Interpolate to manual control state
-       damp3(orthoCam.position, [30, cameraY, 30], 4, delta);
+       damp3(orthoCam.position, [30, cameraY + 5, 30], 4, delta); // 相机位置提高 5 个单位
        damp(orthoCam, 'zoom', cameraZoom, 4, delta);
-       damp3(lookAtTarget.current, [0, cameraY - 15, 0], 4, delta); // Adjusted lookAt slightly lower
+       damp3(lookAtTarget.current, [0, cameraY - 8, 0], 4, delta); // 观察点提高（从 -15 改为 -8）
     }
     
     orthoCam.lookAt(lookAtTarget.current);
     orthoCam.updateProjectionMatrix();
   });
+  return null;
+};
+
+// --- Canvas Background Color Manager ---
+const BackgroundColorManager: React.FC = () => {
+  const { activePalette } = useGameStore();
+  const { scene } = useThree();
+  
+  // 🔑 关键：动态更新场景背景色为海洋颜色，避免黑色闪现
+  useEffect(() => {
+    const bgColor = new THREE.Color(activePalette.waterDeep || '#1a2a3a');
+    scene.background = bgColor;
+  }, [activePalette, scene]);
+  
   return null;
 };
 
@@ -108,26 +122,43 @@ const SceneWrapper: React.FC = () => {
     });
 
     return (
-        <Canvas shadows dpr={[1, 2]} style={{touchAction: 'none'}}>
+        <Canvas 
+            shadows="variance"  // 使用 VSM 阴影，自动支持柔和边缘
+            dpr={[1, 2]} 
+            style={{touchAction: 'none'}}
+            gl={{
+                toneMapping: THREE.ACESFilmicToneMapping,
+                toneMappingExposure: 1.0,
+            }}
+        >
+            {/* 🔑 动态更新背景色，消除黑色闪现 */}
+            <BackgroundColorManager />
             <PolyOcean />
             <OrthographicCamera makeDefault position={[50, 50, 50]} zoom={30} near={-100} far={300} />
             <CameraRig />
             
-            <ambientLight intensity={0.8} color={theme?.lighting?.ambient || "#ffffff"} />
+            <ambientLight intensity={0.9} color={theme?.lighting?.ambient || "#ffffff"} />
             <directionalLight 
                 position={[30, 50, 20]} 
-                intensity={1.2} 
+                intensity={0.8} 
                 color={theme?.lighting?.directional || "#ffffff"}
                 castShadow 
-                shadow-mapSize={[2048, 2048]} 
-                shadow-bias={-0.0001} 
+                shadow-mapSize={[2048, 2048]}
+                shadow-bias={-0.001}
+                shadow-normalBias={0.02}
+                shadow-radius={8}  // 阴影模糊半径 - 数值越大越柔和
+                shadow-camera-near={0.5}
+                shadow-camera-far={150}
             >
-                <orthographicCamera attach="shadow-camera" args={[-50, 50, -50, 50, 0.1, 100]} />
+                <orthographicCamera 
+                    attach="shadow-camera" 
+                    args={[-50, 50, -50, 50, 0.5, 150]} 
+                />
             </directionalLight>
-            <directionalLight position={[-30, 20, -30]} intensity={0.5} color={theme?.lighting?.highlight || "#ffffff"} />
+            <directionalLight position={[-30, 20, -30]} intensity={0.4} color={theme?.lighting?.highlight || "#ffffff"} />
             
-            {/* Fog disabled for clarity - 雾效已禁用以提升清晰度 */}
-            {/* {theme?.fog && <fogExp2 attach="fog" args={[theme.fog, 0.008]} />} */}
+            {/* 启用雾效，隐藏海洋边缘（极远处） - Fog enabled to hide ocean edges (far distance only) */}
+            {theme?.fog && <fogExp2 attach="fog" args={[theme.fog, 0.003]} />}
 
             <Particles />
 
@@ -151,14 +182,8 @@ const SceneWrapper: React.FC = () => {
 }
 
 export const GameScene: React.FC = () => {
-  const { activePalette, hueOffset } = useGameStore();
-  
-  // Apply hue shift to background gradient via CSS filter
-  const filterStyle = { filter: `hue-rotate(${hueOffset * 360}deg)` };
-
   return (
-    <div className="w-full h-full absolute top-0 left-0 transition-colors duration-1000" 
-         style={{ background: activePalette.bgGradient, ...filterStyle }}>
+    <div className="w-full h-full absolute top-0 left-0">
       <SceneWrapper />
     </div>
   );

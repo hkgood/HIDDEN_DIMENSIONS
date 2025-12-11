@@ -1,4 +1,4 @@
-# 寻路机制集成报告
+# HIDDEN DIMENSIONS (维隐) - 寻路机制集成报告
 
 ## ✅ 已完成的集成
 
@@ -17,7 +17,7 @@
 - ✅ `GameNode.isOpticalBridge` - 视错觉桥接点标记
 
 ### 3. **Player 组件升级**
-从 `HIDDEN_DIMENSIONS_2` 移植的增强功能：
+从 `HIDDEN DIMENSIONS` 项目移植的增强功能：
 
 #### 核心改进：
 1. **位置持久化** - 使用 `useRef` 存储当前位置，避免重渲染丢失状态
